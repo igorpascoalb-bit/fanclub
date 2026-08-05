@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#232B5F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Endereçar">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Endereçamento FanClub","short_name":"Endereçar","display":"standalone","background_color":"%23232B5F","theme_color":"%23232B5F","start_url":"."}'>
+<title>Endereçamento · Teste</title>
+<style>
+  :root{--navy:#232B5F;--mag:#B81D55;--bg:#11142e;--card:#1b2044;--ok:#2ecc71}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:#fff;
+       padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  header{background:var(--navy);padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+  header b{font-size:15px;letter-spacing:.3px}
+  header span{font-size:12px;color:#aab}
+  main{padding:12px;max-width:560px;margin:0 auto}
+  .row{display:flex;gap:8px;margin-bottom:10px}
+  .row>*{flex:1}
+  input{background:var(--card);border:1px solid #2c3260;color:#fff;border-radius:10px;padding:12px;font-size:16px}
+  button{background:var(--card);border:1px solid #2c3260;color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer}
+  button.pri{background:var(--mag);border-color:var(--mag)}
+  button.go{background:var(--ok);border-color:var(--ok);color:#062}
+  button:disabled{opacity:.4}
+  #camwrap{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:3/4;margin-bottom:12px}
+  video{width:100%;height:100%;object-fit:cover}
+  #reticle{position:absolute;inset:22% 12%;border:3px solid var(--mag);border-radius:12px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  #flash{position:absolute;inset:0;background:var(--ok);opacity:0;pointer-events:none;transition:opacity .12s}
+  #big{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);padding:10px 14px;
+       font:700 22px JetBrains Mono,monospace;letter-spacing:1px;text-align:center}
+  #big small{display:block;font:500 11px Inter;color:#9cf;letter-spacing:0}
+  .stats{display:flex;gap:8px;margin-bottom:10px}
+  .stat{flex:1;background:var(--card);border-radius:10px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:22px}.stat span{font-size:11px;color:#aab}
+  ul{list-style:none;margin:0;padding:0;max-height:200px;overflow:auto}
+  li{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #2c3260;font-size:13px}
+  li b{font-family:JetBrains Mono,monospace}
+  li em{color:#9cf;font-style:normal;font-size:11px}
+  .hint{font-size:12px;color:#889;text-align:center;margin:8px 0}
+</style>
+</head>
+<body>
+<header><b>Endereçamento · <span>teste EAN-13</span></b><span id="mode">produto</span></header>
+<main>
+  <div class="row">
+    <input id="end" placeholder="Endereço atual" autocomplete="off">
+    <button id="bipEnd" style="flex:0 0 auto">Bipar end.</button>
+  </div>
+
+  <div id="camwrap">
+    <video id="v" playsinline muted></video>
+    <div id="reticle"></div><div id="flash"></div>
+    <div id="big">—<small>aponte a câmera para o código</small></div>
+  </div>
+
+  <div class="row">
+    <button id="start" class="pri">▶ Iniciar câmera</button>
+    <button id="torch" style="flex:0 0 auto;display:none">🔦</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="cnt">0</b><span>leituras</span></div>
+    <div class="stat"><b id="gap">—</b><span>ms última</span></div>
+    <div class="stat"><b id="min">—</b><span>ms mín.</span></div>
+  </div>
+
+  <div class="row">
+    <button id="csv" class="go">⬇ CSV</button>
+    <button id="clr">Limpar</button>
+  </div>
+  <div class="hint" id="status">Toque em Iniciar e permita a câmera. Melhor testar hospedado em HTTPS.</div>
+
+  <ul id="list"></ul>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+let reader,track,capturing='produto',rows=[],lastCode='',lastT=0,lastAny=0,minGap=1e9,ac;
+
+const hints=new Map();
+hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13]);
+
+function beep(f=880){try{ac=ac||new(window.AudioContext||webkitAudioContext)();
+  const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.connect(g);g.connect(ac.destination);
+  g.gain.setValueAtTime(.25,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.12);
+  o.start();o.stop(ac.currentTime+.12);}catch(e){}}
+function flash(){const f=$('#flash');f.style.opacity=.6;setTimeout(()=>f.style.opacity=0,120);}
+
+function onScan(code){
+  const now=Date.now();
+  if(code===lastCode&&now-lastT<1500)return;      // trava anti-duplicata
+  lastCode=code;lastT=now;
+  if(capturing==='endereco'){$('#end').value=code;capturing='produto';$('#mode').textContent='produto';beep(1200);flash();navigator.vibrate&&navigator.vibrate(40);return;}
+  const gap=lastAny?now-lastAny:0;lastAny=now;
+  if(gap&&gap<minGap){minGap=gap;$('#min').textContent=minGap;}
+  rows.push({end:$('#end').value.trim(),ean:code,ts:new Date().toISOString()});
+  $('#cnt').textContent=rows.length;
+  $('#gap').textContent=gap||'—';
+  $('#big').innerHTML=code+'<small>'+(rows.length)+' lidas · '+($('#end').value.trim()||'sem endereço')+'</small>';
+  const li=document.createElement('li');li.innerHTML='<b>'+code+'</b><em>'+($('#end').value.trim()||'—')+'</em>';
+  $('#list').prepend(li);while($('#list').children.length>12)$('#list').lastChild.remove();
+  beep();flash();navigator.vibrate&&navigator.vibrate(50);
+}
+
+$('#start').onclick=async()=>{
+  beep(660); // destrava áudio no iOS (precisa do gesto)
+  if(reader){reader.reset();reader=null;track=null;$('#start').textContent='▶ Iniciar câmera';$('#status').textContent='Parado.';return;}
+  $('#start').textContent='⏸ Parar';$('#status').textContent='Iniciando câmera…';
+  reader=new ZXing.BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:100});
+  try{
+    await reader.decodeFromConstraints(
+      {video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},
+      $('#v'),(res,err)=>{if(res)onScan(res.getText());});
+    $('#status').textContent='Lendo… aponte para um EAN-13.';
+    track=$('#v').srcObject.getVideoTracks()[0];
+    const caps=track.getCapabilities?track.getCapabilities():{};
+    if(caps.torch){$('#torch').style.display='';}
+  }catch(e){$('#status').textContent='Erro na câmera: '+e.message+' (precisa de HTTPS/permissão).';$('#start').textContent='▶ Iniciar câmera';reader=null;}
+};
+$('#torch').onclick=()=>{if(!track)return;const on=$('#torch').dataset.on!=='1';track.applyConstraints({advanced:[{torch:on}]});$('#torch').dataset.on=on?'1':'0';$('#torch').style.opacity=on?1:.5;};
+$('#bipEnd').onclick=()=>{capturing='endereco';$('#mode').textContent='← bipar ENDEREÇO';};
+$('#clr').onclick=()=>{if(!confirm('Limpar leituras?'))return;rows=[];$('#list').innerHTML='';$('#cnt').textContent=0;$('#gap').textContent='—';$('#min').textContent='—';minGap=1e9;lastAny=0;$('#big').innerHTML='—<small>aponte a câmera para o código</small>';};
+$('#csv').onclick=()=>{
+  if(!rows.length)return alert('Nada pra exportar.');
+  const csv='endereco;ean;datahora\n'+rows.map(r=>r.end+';'+r.ean+';'+r.ts).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='enderecamento_'+Date.now()+'.csv';a.click();
+};
+</script>
+</body>
+</html>
