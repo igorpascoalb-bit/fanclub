@@ -113,10 +113,10 @@
 const $=s=>document.querySelector(s);
 let URL_="",KEY="",ME="",stream,track,reader,addr="",addrRows=[],session=[],ac,pollTimer;
 
-const hints=new Map();
-hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13]);
-hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
-reader=new ZXing.BrowserMultiFormatReader(hints);
+const F=ZXing.BarcodeFormat,DH=ZXing.DecodeHintType;
+function mkHints(fmts){const h=new Map();h.set(DH.POSSIBLE_FORMATS,fmts);h.set(DH.TRY_HARDER,true);return h;}
+const hintsProd=mkHints([F.EAN_13]);                                  // produto: só EAN-13
+const hintsAddr=mkHints([F.CODE_128,F.CODE_39,F.QR_CODE,F.EAN_13]);   // endereço: amplo
 
 /* ---------- config ---------- */
 function loadCfg(){URL_=(localStorage.sb_url||'').replace(/\/+$/,'');KEY=localStorage.sb_key||'';ME=localStorage.op_name||'';}
@@ -144,7 +144,8 @@ async function apiDelMine(a){const r=await fetch(URL_+'/rest/v1/bipagens?enderec
 
 /* ---------- audio/feedback ---------- */
 function initAudio(){try{if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();}catch(e){}}
-function beep(f,d,v){try{if(!ac)return;if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);o.start();o.stop(ac.currentTime+d);}catch(e){}}
+function tone(f,d,v){try{const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);o.start();o.stop(ac.currentTime+d);}catch(e){}}
+function beep(f,d,v){if(!ac)return;if(ac.state==='suspended'){ac.resume().then(()=>tone(f,d,v)).catch(()=>{});}else{tone(f,d,v);}}
 function vib(p){navigator.vibrate&&navigator.vibrate(p);}
 function flash(c){const f=$('#flash');f.style.background=c;f.style.opacity=.55;setTimeout(()=>f.style.opacity=0,150);}
 function okFx(){flash('#2ecc71');beep(880,.14,.55);vib(60);}
@@ -211,7 +212,7 @@ async function startCam(){
     $('#start').textContent='⏸ Parar câmera';$('#status').textContent=addr?'Toque na imagem pra bipar o produto.':'Defina o endereço, depois bipe os produtos.';
   }catch(e){$('#status').textContent='Erro na câmera: '+e.message;}
 }
-function readCrop(){
+function readCrop(h){
   const v=$('#v'),VW=v.videoWidth,VH=v.videoHeight;if(!VW)return null;
   const r=v.getBoundingClientRect(),CW=r.width,CH=r.height;
   const sc=Math.max(CW/VW,CH/VH),ox=(VW*sc-CW)/2,oy=(VH*sc-CH)/2;
@@ -221,7 +222,7 @@ function readCrop(){
   try{
     const src=new ZXing.HTMLCanvasElementLuminanceSource(cv);
     const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
-    const mfr=new ZXing.MultiFormatReader();mfr.setHints(hints);
+    const mfr=new ZXing.MultiFormatReader();mfr.setHints(h);
     const res=mfr.decode(bmp);
     return res?(res.getText?res.getText():res.text):null;
   }catch(e){return null;}
@@ -230,7 +231,7 @@ async function scan(){
   if(!stream){$('#status').textContent='Inicie a câmera primeiro.';return;}
   if(!URL_||!KEY||!ME){openSetup();return;}
   initAudio();
-  const code=readCrop();
+  const code=readCrop(addr?hintsProd:hintsAddr);
   if(!code){errFx();$('#big').innerHTML='não leu<small>centralize e toque de novo</small>';return;}
   if(!addr){ // força endereço: primeira leitura define endereço
     $('#end').value=code;applyAddr(code);beep(1200,.12,.5);flash('#2ecc71');vib(40);
