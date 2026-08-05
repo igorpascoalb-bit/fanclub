@@ -218,7 +218,13 @@ function readCrop(){
   const sx=(0.12*CW+ox)/sc,sy=(0.22*CH+oy)/sc,sw=(0.76*CW)/sc,sh=(0.56*CH)/sc;
   const cv=document.createElement('canvas');cv.width=Math.round(sw);cv.height=Math.round(sh);
   cv.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,cv.width,cv.height);
-  try{const res=(typeof reader.decodeFromCanvas==='function')?reader.decodeFromCanvas(cv):null;return res?(res.getText?res.getText():res.text):null;}catch(e){return null;}
+  try{
+    const src=new ZXing.HTMLCanvasElementLuminanceSource(cv);
+    const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
+    const mfr=new ZXing.MultiFormatReader();mfr.setHints(hints);
+    const res=mfr.decode(bmp);
+    return res?(res.getText?res.getText():res.text):null;
+  }catch(e){return null;}
 }
 async function scan(){
   if(!stream){$('#status').textContent='Inicie a câmera primeiro.';return;}
