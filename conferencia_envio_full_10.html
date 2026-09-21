@@ -452,8 +452,8 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
         <div id="etqBanners"></div>
         <div class="filters" style="margin-bottom:var(--sp-3)">
           <div class="field"><label for="etqModo">O que imprimir</label>
-            <select id="etqModo"><option value="falta">Só o que falta imprimir</option><option value="tudo">Reimprimir tudo do plano</option></select></div>
-          <button class="btn btn-secondary" id="etqSelConf">Selecionar pais conferidos</button>
+            <select id="etqModo"><option value="conf">Conferido e ainda não impresso</option><option value="falta">Tudo do plano que falta imprimir</option><option value="tudo">Reimprimir tudo do plano</option></select></div>
+          <button class="btn btn-secondary" id="etqSelConf">Selecionar pais com etiquetas a imprimir</button>
           <button class="btn btn-ghost" id="etqSelTodos">Todos</button>
           <button class="btn btn-ghost" id="etqSelNenhum">Limpar</button>
           <button class="btn btn-primary" id="btnGerarZpl" style="margin-left:auto">Gerar ZPL</button>
@@ -465,11 +465,19 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
         </div>
         <details class="box">
           <summary>Enviar para a impressora (Windows)</summary>
-          <p class="muted" style="margin:8px 0">Compartilhe a impressora no Windows (Propriedades → Compartilhamento) e escreva o nome do compartilhamento. Baixe o <code>imprimir_zpl.bat</code> uma vez e, para imprimir, arraste o arquivo <code>.zpl</code> gerado para cima dele.</p>
-          <div class="filters">
-            <div class="field"><label for="prnNome">Nome do compartilhamento</label><input type="text" id="prnNome" placeholder="ex.: ZebraGX420"></div>
-            <button class="btn btn-secondary" id="btnBat">Baixar imprimir_zpl.bat</button>
+          <p class="muted" style="margin:8px 0">Cada impressora precisa estar instalada e <b>compartilhada</b> no Windows (Propriedades → Compartilhamento). Escreva o nome do compartilhamento (sem espaços) e baixe o <code>.bat</code> dela — uma vez só. Para imprimir, arraste o arquivo <code>.zpl</code> gerado para cima do <code>.bat</code> da impressora que você quer usar.</p>
+          <div class="filters" style="margin-bottom:var(--sp-2)">
+            <div class="field"><label for="prn1Ap">Impressora 1</label><input type="text" id="prn1Ap" placeholder="ex.: Zebra ZT220"></div>
+            <div class="field"><label for="prn1Sh">Nome do compartilhamento</label><input type="text" id="prn1Sh" placeholder="ex.: ZT220"></div>
+            <button class="btn btn-secondary" id="btnBat1" style="align-self:flex-end">Baixar .bat</button>
           </div>
+          <div class="filters">
+            <div class="field"><label for="prn2Ap">Impressora 2</label><input type="text" id="prn2Ap" placeholder="ex.: Tomate"></div>
+            <div class="field"><label for="prn2Sh">Nome do compartilhamento</label><input type="text" id="prn2Sh" placeholder="ex.: Tomate"></div>
+            <button class="btn btn-secondary" id="btnBat2" style="align-self:flex-end">Baixar .bat</button>
+          </div>
+          <p class="muted" style="margin:10px 0 6px">Antes do primeiro lote, imprima o teste em cada impressora: ele desenha uma moldura nas duas colunas e confere se a impressora aceita ZPL e se a largura bate.</p>
+          <button class="btn btn-ghost" id="btnTesteZpl">Baixar teste de alinhamento (.zpl)</button>
         </details>
       </div>
     </div>
@@ -1327,10 +1335,15 @@ async function ensureLabels(){
   }catch(e){ ETQ.err=true; ETQ.errMsg=errMsg(e); }
   ETQ.loading=false;
 }
-function etqQtd(k){
-  const p=IT[k], modo=$('etqModo').value; const q=modo==='tudo'?p.plan:Math.max(0,p.plan-p.impresso);
-  return Math.min(q,ETQ.avail[loose(k)]||0);
+// quanto se quer imprimir de um SKU, conforme o modo (antes de limitar ao que existe no arquivo)
+function etqDesej(k){
+  const p=IT[k], modo=$('etqModo').value;
+  if(modo==='tudo') return p.plan;
+  if(modo==='falta') return Math.max(0,p.plan-p.impresso);
+  return Math.max(0,Math.min(bipEf(k),p.plan)-p.impresso);          // conferido − já impresso
 }
+const etqConfPend=k=>Math.max(0,Math.min(bipEf(k),IT[k].plan)-IT[k].impresso);
+function etqQtd(k){ return Math.min(etqDesej(k),ETQ.avail[loose(k)]||0); }
 async function renderEtq(){
   if(!E) return;
   if(ETQ.for!==E.id&&!ETQ.loading&&!ETQ.err){ ensureLabels().then(()=>renderEtq()); }
@@ -1339,19 +1352,21 @@ async function renderEtq(){
   $('etqNoZpl').classList.toggle('hidden',ETQ.loading||ETQ.for!==E.id||!!ETQ.labels);
   $('etqReady').classList.toggle('hidden',ETQ.loading||ETQ.for!==E.id||!ETQ.labels);
   if(ETQ.loading||ETQ.for!==E.id||!ETQ.labels) return;
-  $('prnNome').value=$('prnNome').value||LS.get('fc_impressora')||'';
   const pais=paisResumo(); const keys=new Set(ORDER.map(loose));
   const orfas=Object.keys(ETQ.avail).filter(k=>!keys.has(k)), totOrf=orfas.reduce((a,k)=>a+ETQ.avail[k],0);
-  let totImp=0,totPlan=0,semEtq=0;
+  let totImp=0,totPlan=0,semEtq=0,totConfPend=ORDER.reduce((a,k)=>a+etqConfPend(k),0);
   const rows=pais.map(g=>{
     const aImp=g.skus.reduce((a,k)=>a+etqQtd(k),0);
-    const faltaEtq=g.skus.reduce((a,k)=>{ const q=$('etqModo').value==='tudo'?IT[k].plan:Math.max(0,IT[k].plan-IT[k].impresso); return a+Math.max(0,q-(ETQ.avail[loose(k)]||0)); },0);
+    const faltaEtq=g.skus.reduce((a,k)=>a+Math.max(0,etqDesej(k)-(ETQ.avail[loose(k)]||0)),0);
+    const confPend=g.skus.reduce((a,k)=>a+etqConfPend(k),0), impAMais=g.skus.some(k=>IT[k].impresso>Math.min(bipEf(k),IT[k].plan));
     totImp+=g.imp; totPlan+=g.plan; if(faltaEtq) semEtq+=faltaEtq;
     let sit; const conf=g.bip>=g.plan;
-    if(g.imp>=g.plan&&g.plan>0) sit='<span class="tag tag-ok">✓ impresso</span>';
-    else if(faltaEtq) sit=`<span class="tag tag-warn">faltam ${faltaEtq} no arquivo</span>`;
-    else if(g.imp>0) sit='<span class="tag tag-info">impresso parcial</span>';
-    else sit='<span class="tag tag-neutral">não impresso</span>';
+    if(faltaEtq) sit=`<span class="tag tag-warn">faltam ${faltaEtq} no arquivo</span>`;
+    else if(g.imp>=g.plan&&g.plan>0) sit='<span class="tag tag-ok">✓ impresso</span>';
+    else if(confPend>0) sit=`<span class="tag tag-info">${confPend} conferido(s) sem etiqueta</span>`;
+    else if(impAMais) sit='<span class="tag tag-warn">impresso a mais que o conferido</span>';
+    else if(g.imp>0) sit='<span class="tag tag-info">impresso até o conferido</span>';
+    else sit='<span class="tag tag-neutral">nada conferido</span>';
     return `<tr><td><input type="checkbox" data-pai="${esc(g.pai)}" ${ETQ.sel.has(g.pai)?'checked':''} aria-label="Selecionar ${esc(g.pai)}"></td><td><span class="sku">${esc(g.pai)}</span></td><td><div class="trunc">${esc(g.titulo)}</div></td>
       <td class="num">${g.plan}</td><td class="num">${g.bip}${conf?' ✓':''}</td><td class="num">${g.imp}</td><td class="num">${aImp}</td><td>${sit}</td></tr>`;
   });
@@ -1359,7 +1374,8 @@ async function renderEtq(){
   $('etqBody').querySelectorAll('input[data-pai]').forEach(c=>c.onchange=()=>{ c.checked?ETQ.sel.add(c.dataset.pai):ETQ.sel.delete(c.dataset.pai); updateGerar(); });
   const totLab=ETQ.labels.length;
   $('etqKpis').innerHTML=`<div class="kpi"><div class="kpi-label">Etiquetas no arquivo</div><div class="kpi-value">${nf.format(totLab)}</div></div>
-    <div class="kpi is-accent"><div class="kpi-label">Impressas</div><div class="kpi-value">${nf.format(totImp)} / ${nf.format(totPlan)}</div></div>
+    <div class="kpi is-accent"><div class="kpi-label">Conferido e não impresso</div><div class="kpi-value">${nf.format(totConfPend)}</div></div>
+    <div class="kpi"><div class="kpi-label">Impressas</div><div class="kpi-value">${nf.format(totImp)} / ${nf.format(totPlan)}</div></div>
     <div class="kpi"><div class="kpi-label">Produtos-pai</div><div class="kpi-value">${pais.length}</div></div>`;
   let bn='';
   if(orfas.length) bn+=bannerHtml('warn',`<div><b>${totOrf} etiqueta(s) de ${orfas.length} SKU(s) do arquivo não batem com nenhum SKU do plano</b> (formato de SKU diferente?). Elas não entram em nenhum lote.</div>`);
@@ -1370,7 +1386,7 @@ async function renderEtq(){
 function selQtd(){ const q={}; let n=0; ETQ.sel.forEach(p=>{ ORDER.filter(k=>IT[k].pai===p).forEach(k=>{ const c=etqQtd(k); if(c>0){ q[k]=c; n+=c; } }); }); return {q,n}; }
 function updateGerar(){ const {n}=selQtd(); $('btnGerarZpl').textContent='Gerar ZPL ('+nf.format(n)+' etiqueta'+(n===1?'':'s')+')'; $('btnGerarZpl').disabled=!n; }
 $('etqModo').onchange=renderEtq;
-$('etqSelConf').onclick=()=>{ ETQ.sel=new Set(paisResumo().filter(g=>g.bip>=g.plan&&g.plan>0).map(g=>g.pai)); renderEtq(); };
+$('etqSelConf').onclick=()=>{ ETQ.sel=new Set(paisResumo().filter(g=>g.skus.some(k=>etqQtd(k)>0)).map(g=>g.pai)); renderEtq(); };
 $('etqSelTodos').onclick=()=>{ ETQ.sel=new Set(paisResumo().map(g=>g.pai)); renderEtq(); };
 $('etqSelNenhum').onclick=()=>{ ETQ.sel=new Set(); renderEtq(); };
 $('btnGerarZpl').onclick=()=>{
@@ -1398,13 +1414,20 @@ function loadZplEnv(buf){
   call('full_anexar_zpl',{p_envio:E.id,p_zpl:txt}).then(async()=>{ E.tem_zpl=true; ETQ.for=null; await refreshEstado(); renderEtq(); }).catch(e=>alert('Não consegui anexar: '+errMsg(e)));
 }
 wireDrop('dzZplEnv','fZplEnv',loadZplEnv);
-$('prnNome').addEventListener('change',()=>LS.set('fc_impressora',$('prnNome').value.trim()));
-$('btnBat').onclick=()=>{
-  const nome=$('prnNome').value.trim(); if(!nome){ alert('Escreva o nome do compartilhamento da impressora.'); $('prnNome').focus(); return; }
-  LS.set('fc_impressora',nome);
-  const bat=['@echo off','setlocal','set PRINTER='+nome.replace(/[%"&|<>^]/g,''),'if "%~1"=="" (','  echo Arraste o arquivo .zpl para cima deste .bat','  pause','  exit /b 1',')','copy /b "%~1" "\\\\localhost\\%PRINTER%"','if errorlevel 1 (echo FALHOU: confira o nome do compartilhamento) else (echo Enviado para a impressora)','pause',''].join('\r\n');
-  dl(bat,'imprimir_zpl.bat','application/octet-stream');
-};
+/* impressoras (até 2): apelido + nome do compartilhamento; cada uma gera o próprio .bat */
+function loadPrn(){ let p=[]; try{ p=JSON.parse(LS.get('fc_impressoras')||'[]'); }catch(e){} return [p[0]||{ap:'Zebra ZT220',sh:''},p[1]||{ap:'Tomate',sh:''}]; }
+function savePrn(){ LS.set('fc_impressoras',JSON.stringify([{ap:$('prn1Ap').value.trim(),sh:$('prn1Sh').value.trim()},{ap:$('prn2Ap').value.trim(),sh:$('prn2Sh').value.trim()}])); }
+(function initPrn(){ const p=loadPrn(); $('prn1Ap').value=p[0].ap; $('prn1Sh').value=p[0].sh; $('prn2Ap').value=p[1].ap; $('prn2Sh').value=p[1].sh; })();
+['prn1Ap','prn1Sh','prn2Ap','prn2Sh'].forEach(id=>$(id).addEventListener('change',savePrn));
+function baixarBat(n){
+  savePrn(); const ap=$('prn'+n+'Ap').value.trim()||('Impressora '+n), sh=$('prn'+n+'Sh').value.trim();
+  if(!sh){ alert('Escreva o nome do compartilhamento da '+ap+'.'); $('prn'+n+'Sh').focus(); return; }
+  const lim=t=>t.replace(/[%"&|<>^]/g,'');
+  const bat=['@echo off','setlocal','set PRINTER='+lim(sh),'if "%~1"=="" (','  echo Impressora: '+lim(ap),'  echo Arraste o arquivo .zpl para cima deste .bat','  pause','  exit /b 1',')','echo Enviando para '+lim(ap)+'...','copy /b "%~1" "\\\\localhost\\%PRINTER%"','if errorlevel 1 (echo FALHOU: confira o nome do compartilhamento de '+lim(ap)+') else (echo Enviado para '+lim(ap)+')','pause',''].join('\r\n');
+  dl(bat,'imprimir_'+slug(ap)+'.bat','application/octet-stream');
+}
+$('btnBat1').onclick=()=>baixarBat(1); $('btnBat2').onclick=()=>baixarBat(2);
+$('btnTesteZpl').onclick=()=>dl('^XA^CI28\n^FO2,2^GB402,186,3^FS\n^FO408,2^GB402,186,3^FS\n^FO22,60^A0N,34,34^FDCOLUNA 1^FS\n^FO430,60^A0N,34,34^FDCOLUNA 2^FS\n^FO22,110^A0N,22,22^FDTeste ZPL - FanClub^FS\n^FO430,110^A0N,22,22^FDTeste ZPL - FanClub^FS\n^XZ\n','teste_alinhamento.zpl','text/plain');
 
 /* ---------- separação c/ localização ---------- */
 let locSort={k:'necessidade',dir:-1}, LOCMAN={};
