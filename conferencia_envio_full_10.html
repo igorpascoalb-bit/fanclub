@@ -275,7 +275,7 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
     <button class="btn btn-ghost" id="btnEnvios">Envios</button>
     <button class="btn btn-ghost" id="btnSair">Sair</button>
   </div>
-  <span class="tag tag-neutral" id="verTag">v10.0</span>
+  <span class="tag tag-neutral" id="verTag">v11.0</span>
 </header>
 
 <main class="app">
@@ -411,6 +411,11 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
         <div class="scanpane card">
           <label for="ean" class="lbl">Bipe o EAN da caixa</label>
           <input type="text" id="ean" autocomplete="off" placeholder="—">
+          <div class="filters" style="margin-top:var(--sp-3)">
+            <div class="field"><label for="histQ">Histórico de um item</label><input type="text" id="histQ" autocomplete="off" placeholder="EAN ou SKU + Enter"></div>
+            <div class="field"><label for="somNivel">Som da conferência</label><select id="somNivel"><option value="normal">Normal</option><option value="alto">Alto</option><option value="max">Máximo</option></select></div>
+            <button class="btn btn-ghost" id="btnTestSom" style="align-self:flex-end">Testar som</button>
+          </div>
           <div class="bar-actions">
             <button class="btn btn-secondary" id="btnUndo">↶ Desfazer último</button>
             <div class="push">
@@ -425,6 +430,7 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
           <div class="fb-count" id="fbCount"></div>
         </div>
       </div>
+      <div id="histBox" class="card hidden" style="margin-top:var(--sp-4)"></div>
       <div id="confBanner" style="margin-top:var(--sp-4)"></div>
       <div class="kpis" id="confKpis" style="margin-bottom:var(--sp-3)"></div>
       <div class="filters" style="margin-bottom:var(--sp-3)">
@@ -453,10 +459,11 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
         <div class="filters" style="margin-bottom:var(--sp-3)">
           <div class="field"><label for="etqModo">O que imprimir</label>
             <select id="etqModo"><option value="conf">Conferido e ainda não impresso</option><option value="falta">Tudo do plano que falta imprimir</option><option value="tudo">Reimprimir tudo do plano</option></select></div>
+          <div class="field"><label for="etqPrn">Imprimir na</label><select id="etqPrn"></select></div>
           <button class="btn btn-secondary" id="etqSelConf">Selecionar pais com etiquetas a imprimir</button>
           <button class="btn btn-ghost" id="etqSelTodos">Todos</button>
           <button class="btn btn-ghost" id="etqSelNenhum">Limpar</button>
-          <button class="btn btn-primary" id="btnGerarZpl" style="margin-left:auto">Gerar ZPL</button>
+          <button class="btn btn-primary" id="btnGerarZpl" style="margin-left:auto">Gerar etiquetas</button>
         </div>
         <div id="etqPending"></div>
         <div class="tbl-wrap">
@@ -464,20 +471,28 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
           <tbody id="etqBody"></tbody></table>
         </div>
         <details class="box">
-          <summary>Enviar para a impressora (Windows)</summary>
-          <p class="muted" style="margin:8px 0">Cada impressora precisa estar instalada e <b>compartilhada</b> no Windows (Propriedades → Compartilhamento). Escreva o nome do compartilhamento (sem espaços) e baixe o <code>.bat</code> dela — uma vez só. Para imprimir, arraste o arquivo <code>.zpl</code> gerado para cima do <code>.bat</code> da impressora que você quer usar.</p>
+          <summary>Impressoras (Windows)</summary>
+          <p class="muted" style="margin:8px 0">Cada impressora precisa estar instalada e <b>compartilhada</b> no Windows (Propriedades → Compartilhamento). Escreva o nome do compartilhamento (sem espaços), escolha a linguagem dela e baixe o <code>.bat</code> — uma vez só. Para imprimir, escolha a impressora em “Imprimir na”, gere o arquivo e arraste-o para cima do <code>.bat</code> dessa impressora.</p>
           <div class="filters" style="margin-bottom:var(--sp-2)">
             <div class="field"><label for="prn1Ap">Impressora 1</label><input type="text" id="prn1Ap" placeholder="ex.: Zebra ZT220"></div>
             <div class="field"><label for="prn1Sh">Nome do compartilhamento</label><input type="text" id="prn1Sh" placeholder="ex.: ZT220"></div>
+            <div class="field"><label for="prn1Lang">Linguagem</label><select id="prn1Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
             <button class="btn btn-secondary" id="btnBat1" style="align-self:flex-end">Baixar .bat</button>
           </div>
-          <div class="filters">
+          <div class="filters" style="margin-bottom:var(--sp-2)">
             <div class="field"><label for="prn2Ap">Impressora 2</label><input type="text" id="prn2Ap" placeholder="ex.: Tomate"></div>
             <div class="field"><label for="prn2Sh">Nome do compartilhamento</label><input type="text" id="prn2Sh" placeholder="ex.: Tomate"></div>
+            <div class="field"><label for="prn2Lang">Linguagem</label><select id="prn2Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
             <button class="btn btn-secondary" id="btnBat2" style="align-self:flex-end">Baixar .bat</button>
           </div>
-          <p class="muted" style="margin:10px 0 6px">Antes do primeiro lote, imprima o teste em cada impressora: ele desenha uma moldura nas duas colunas e confere se a impressora aceita ZPL e se a largura bate.</p>
-          <button class="btn btn-ghost" id="btnTesteZpl">Baixar teste de alinhamento (.zpl)</button>
+          <p class="muted" style="margin:10px 0 6px"><b>Ajuste fino da Tomate (TSPL)</b> — bobina 50x25 em duas colunas. Os valores abaixo já vêm calibrados; só mexa se o alinhamento mudar.</p>
+          <div class="filters" style="margin-bottom:var(--sp-2)">
+            <div class="field"><label for="tomRef">Margem esquerda (REFERENCE, pontos)</label><input type="number" id="tomRef" min="0" max="120" step="1"></div>
+            <div class="field"><label for="tomStep">Passo da coluna 2 (pontos)</label><input type="number" id="tomStep" min="300" max="500" step="1"></div>
+            <label class="chk" style="align-self:flex-end"><input type="checkbox" id="tomAcento"> manter acentos (CODEPAGE 1252)</label>
+          </div>
+          <p class="muted" style="margin:10px 0 6px">Antes do primeiro lote, imprima o teste na impressora escolhida em “Imprimir na”: ele desenha uma moldura nas duas colunas e confere se a impressora aceita a linguagem e se a largura bate. Na Tomate, marque “manter acentos” e imprima o teste para ver se a linha “Tênis Anatômico ção” sai correta; se sair com símbolos estranhos, deixe desmarcado (os acentos são removidos).</p>
+          <button class="btn btn-ghost" id="btnTesteZpl">Baixar teste de alinhamento</button>
         </details>
       </div>
     </div>
@@ -514,7 +529,7 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
     </div>
   </section>
 </main>
-<footer class="app-foot"><span id="footL">Conferência de envio Full · v10.0</span><span id="footR">nenhum dado carregado</span></footer>
+<footer class="app-foot"><span id="footL">Conferência de envio Full · v11.0</span><span id="footR">nenhum dado carregado</span></footer>
 
 <script>
 "use strict";
@@ -524,7 +539,7 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
    ========================================================= */
 const SUPA_URL='https://kitefyicxvyqicvvspcj.supabase.co';
 const SUPA_KEY='sb_publishable_VOMnQxKzGb89TDIxp40lHw_HU-mOcNa';
-const VERSION='v10.0';
+const VERSION='v11.0';
 
 /* ---------- util ---------- */
 const $=id=>document.getElementById(id);
@@ -1033,8 +1048,9 @@ function zplParse(txt){
       const sku=(/\^FDSKU: ([^\n]*)\n/.exec(body)||[])[1];
       const cod=(/\^BCN,54,N,N\^FD([^\^]*)\^FS/.exec(body)||[])[1];
       const ti=(/\^FO22,115[^\n]*\^FD([^\^]*)\^FS/.exec(body)||[])[1];
+      const va=(/\^FO22,150[^\n]*\^FD([^\^]*)\^FS/.exec(body)||[])[1];
       const s=sku?zplDecode(sku).trim():null;
-      labels.push({body,sku:s,cod,titulo:ti?zplDecode(ti).trim():'',key:s?loose(norm(s)):null});
+      labels.push({body,sku:s,cod,titulo:ti?zplDecode(ti).trim():'',variacao:va?zplDecode(va).trim():'',key:s?loose(norm(s)):null});
     });
   }
   return labels;
@@ -1054,6 +1070,81 @@ function zplSelecionar(labels,qtdPorKey){
   return {labels:out,faltando:Object.fromEntries(Object.entries(falta).filter(([k,v])=>v>0))};
 }
 function zplIndex(labels){ const ix={}; labels.forEach(l=>{ if(!l.key) return; const o=ix[l.key]||(ix[l.key]={n:0,cod:l.cod,titulo:l.titulo}); o.n++; }); return ix; }
+/* ---- TSPL (Tomate MDK-022 · 203 dpi · bobina 50x25mm, 2 colunas) ----
+   Valores validados por teste de impressão: SIZE 103x25mm, GAP 3mm, REFERENCE 24, passo 416, área útil 370 pontos por etiqueta.
+   O ML entrega ZPL; aqui cada etiqueta é lida (código, título, cor-tamanho, SKU) e redesenhada com as fontes internas da impressora. */
+const TSPL={w:103,h:25,gap:3,area:370,alt:196};
+/* Fontes calibradas por impressão real na MDK-022: o número da fonte no TSPL não muda o tamanho nessa
+   impressora, EXCETO a fonte "0", que sai menor. Medido com régua: fonte "0" ~8,4pt/caractere (42 cabem
+   nos 358pt úteis), fonte "1" (=2=3 nessa impressora) ~11,3pt/caractere (31 cabem). Multiplicador 2x2 dobra
+   certinho, mas fica grande demais para a etiqueta — não é usado. Título = fonte "0" (menor); Cor/Tamanho e
+   SKU = fonte "1" (maior), para dar a hierarquia visual sem gambiarra de escala. */
+const TS_FONT={0:{w:8.4,h:13},1:{w:11.3,h:17}};
+function tsplCfg(){
+  let o={}; try{ o=JSON.parse(LS.get('fc_tomate')||'{}'); }catch(e){}
+  const n=(v,d,lo,hi)=>{ v=parseInt(v); return isNaN(v)?d:Math.min(hi,Math.max(lo,v)); };
+  return Object.assign({},TSPL,{ref:n(o.ref,24,0,120),step:n(o.step,416,300,500),acento:!!o.acento});
+}
+function tsTexto(t,cfg){
+  t=String(t==null?'':t).replace(/\s+/g,' ').trim();
+  if(!cfg.acento) return t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,'?');
+  return t.replace(/[^\x20-\x7E\u00A0-\u00FF]/g,'?');
+}
+const tsQ=t=>String(t).replace(/\\/g,'/').replace(/"/g,'\\["]');
+function tsWrap(txt,max,linhas){
+  const out=[]; let cur='';
+  txt.split(' ').forEach(w=>{
+    while(w.length>max){ if(cur){ out.push(cur); cur=''; } out.push(w.slice(0,max)); w=w.slice(max); }
+    if(!w) return;
+    if(!cur) cur=w; else if((cur+' '+w).length<=max) cur+=' '+w; else { out.push(cur); cur=w; }
+  });
+  if(cur) out.push(cur);
+  return {linhas:out.slice(0,linhas),cortou:out.length>linhas};
+}
+function tsLabel(l,x0,cfg){
+  const A=cfg.area, M=6, W=A-2*M, els=[]; let cortou=false;
+  const txt=(font,x,y,t)=>{ const f=TS_FONT[font]; els.push({t:'text',x:x0+x,y,w:t.length*f.w,h:f.h,cmd:'TEXT '+(x0+x)+','+y+',"'+font+'",0,1,1,"'+tsQ(t)+'"'}); };
+  const clipTo=(t,font)=>{ const max=Math.floor(W/TS_FONT[font].w); return t.length>max?t.slice(0,max):t; };
+  const cod=String(l.cod||'').replace(/[^\x20-\x7E]/g,'');
+  if(cod){
+    const bw=(11*(cod.length+2)+13)*2, bx=Math.max(M,Math.round((A-bw)/2));          // Code 128, barra fina de 2 pontos (estimativa em subset B)
+    els.push({t:'bar',x:x0+bx,y:10,w:bw,h:54,cmd:'BARCODE '+(x0+bx)+',10,"128",54,0,0,2,2,"'+tsQ(cod)+'"'});
+    const cx=Math.max(M,Math.round((A-cod.length*TS_FONT[1].w)/2)); txt(1,cx,68,cod); txt(1,cx+1,68,cod);   // código em negrito (2 passadas, como no ML), fonte "1"
+  }
+  const maxT=Math.floor(W/TS_FONT[0].w);
+  const ti=tsWrap(tsTexto(l.titulo,cfg),maxT,2); cortou=ti.cortou;
+  ti.linhas.forEach((t,i)=>txt(0,M,98+i*15,t));                                      // nome do produto: fonte "0" (menor), 2 linhas
+  const va=tsTexto(l.variacao,cfg); if(va) txt(1,M,136,clipTo(va,1));                // Cor/Tamanho: fonte "1" (maior)
+  const sk='SKU: '+tsTexto(l.sku,cfg); txt(1,M,160,clipTo(sk,1));                    // SKU: fonte "1" (maior)
+  return {els,cortou};
+}
+function tsHeader(cfg){
+  const CR='\r\n';
+  return 'SIZE '+cfg.w+' mm,'+cfg.h+' mm'+CR+'GAP '+cfg.gap+' mm,0'+CR+'DIRECTION 1'+CR+'REFERENCE '+cfg.ref+',0'+CR+(cfg.acento?'CODEPAGE 1252'+CR:'');
+}
+function tsplBuild(labels,cfg,stats){
+  cfg=cfg||tsplCfg(); const CR='\r\n'; let o=tsHeader(cfg);
+  for(let i=0;i<labels.length;i+=2){                       // 2 por fileira; se ímpar, a 2ª coluna da última fileira fica vazia
+    o+='CLS'+CR;
+    [0,1].forEach(c=>{ const l=labels[i+c]; if(!l) return; const r=tsLabel(l,c*cfg.step,cfg); if(r.cortou&&stats) stats.cortadas++; r.els.forEach(e=>{ o+=e.cmd+CR; }); });
+    o+='PRINT 1,1'+CR;
+  }
+  return o;
+}
+function tsplTeste(cfg){
+  cfg=cfg||tsplCfg(); const CR='\r\n'; let o=tsHeader(cfg)+'CLS'+CR;
+  [0,1].forEach(c=>{ const x=c*cfg.step, A=cfg.area, cx=Math.round((A-(11*(13+2)+13)*2)/2);
+    o+='BOX '+x+',4,'+(x+A)+','+cfg.alt+',2'+CR+'TEXT '+(x+40)+',14,"1",0,1,1,"COLUNA '+(c+1)+'"'+CR+
+       'BARCODE '+(x+Math.max(6,cx))+',44,"128",54,0,0,2,2,"7891234567895"'+CR+
+       'TEXT '+(x+6)+',108,"0",0,1,1,"Teste TSPL - FanClub"'+CR+
+       'TEXT '+(x+6)+',132,"1",0,1,1,"'+tsQ(tsTexto('Tênis Anatômico ção',cfg))+'"'+CR;
+  });
+  return o+'PRINT 1,1'+CR;
+}
+function dlLatin1(txt,name){          // TSPL vai em bytes (ASCII ou Latin-1); dl() gravaria UTF-8
+  const u=new Uint8Array(txt.length); for(let i=0;i<txt.length;i++) u[i]=txt.charCodeAt(i)&255;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([u],{type:'application/octet-stream'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+}
 function loadZplNew(buf,nomeArq){
   const txt=decode(buf,'utf-8').replace(/\r\n/g,'\n');
   const labels=zplParse(txt);
@@ -1156,7 +1247,7 @@ async function refreshEstado(){
   applyEstado(r);
 }
 async function openEnvio(id,silent){
-  showView('envio'); E=null; ETQ={for:null,text:null,labels:null,avail:{},sel:new Set(),pending:null,loading:false,err:false}; baixasCache=null;
+  showView('envio'); E=null; ETQ={for:null,text:null,labels:null,avail:{},sel:new Set(),pending:null,loading:false,err:false}; baixasCache=null; HK=null; $('histBox').classList.add('hidden');
   $('envNome').textContent='Carregando…'; $('envTags').innerHTML=''; $('confBody').innerHTML='<tr><td colspan="7"><div class="skelbox"><div class="skel"></div><div class="skel" style="width:60%"></div></div></td></tr>';
   $('envMsg').innerHTML=''; selectEnvTab('C');
   try{
@@ -1195,32 +1286,88 @@ $('btnEncerrar').onclick=async()=>{
 
 /* ---------- bipagem ---------- */
 let audioCtx=null;
+const SOM_NIV={normal:.3,alto:.7,max:1};
+function somNivel(){ const v=LS.get('fc_som'); return SOM_NIV[v]?v:'alto'; }
+function tone(t0,f,dur,vol,wave){
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type=wave; o.frequency.setValueAtTime(f,t0);
+  g.gain.setValueAtTime(.0001,t0); g.gain.exponentialRampToValueAtTime(vol,t0+.008); g.gain.setValueAtTime(vol,t0+Math.max(.01,dur-.03)); g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0+dur+.03);
+}
+/* ok = bip curto agudo · done = tamanho fechou (dois tons subindo) · warn = excesso (dois tons descendo) · bad = não encontrado (grave longo) */
 function beep(type){
   try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume();
-    const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination);
-    o.frequency.value=type==='ok'?880:type==='warn'?520:200; g.gain.value=.08; o.start(); o.stop(audioCtx.currentTime+(type==='ok'?.09:.22));
+    const v=SOM_NIV[somNivel()], t=audioCtx.currentTime+.01;
+    if(type==='ok') tone(t,1100,.12,v,'square');
+    else if(type==='done'){ tone(t,900,.10,v,'square'); tone(t+.12,1400,.18,v,'square'); }
+    else if(type==='warn'){ tone(t,720,.17,v,'square'); tone(t+.2,520,.22,v,'square'); }
+    else tone(t,180,.45,v,'sawtooth');
   }catch(e){}
 }
+$('somNivel').value=somNivel();
+$('somNivel').onchange=()=>{ LS.set('fc_som',$('somNivel').value); beep('done'); };
+$('btnTestSom').onclick=()=>{ ['ok','done','warn','bad'].forEach((t,i)=>setTimeout(()=>beep(t),i*650)); };
 function feedback(cls,sku,msg,count){ const fb=$('fb'); fb.className='feedback '+cls; $('fbSku').textContent=sku; $('fbMsg').textContent=msg; $('fbMsg').style.color=''; $('fbCount').textContent=count||''; }
 $('ean').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); processScan($('ean').value); $('ean').value=''; } });
 function addEvento(k,delta){
   S.fila.push({id:uuid(),envio_id:E.id,sku:k,delta,maquina:S.maquina,ts:new Date().toISOString()}); saveFila();
   if(delta>0){ HIST.push(k); if(HIST.length>300) HIST=HIST.slice(-300); LS.set('fc_full_hist_'+E.id,JSON.stringify(HIST)); }
   computePend(); renderConf(); renderSyncBadge(); kickSync();
+  if(HK===k){ clearTimeout(HKT); HKT=setTimeout(()=>abrirHist(k,true),500); }      // painel de histórico aberto neste item: atualiza
 }
-function processScan(raw){
-  const s=String(raw).trim(); if(!s||!E) return;
-  if(E.encerrado_em){ beep('bad'); feedback('bad','—','Envio encerrado — reabra para bipar'); return; }
+function resolveItem(raw){
+  const s=String(raw).trim(); if(!s) return null;
   const digits=s.replace(/\D/g,'');
   let k=(digits&&EANIDX[digits])?EANIDX[digits]:null;
   if(!k&&IT[norm(s)]) k=norm(s);
   if(!k){ const l=loose(norm(s)); k=ORDER.find(x=>loose(x)===l)||null; }
+  return k;
+}
+function processScan(raw){
+  const s=String(raw).trim(); if(!s||!E) return;
+  if(E.encerrado_em){ beep('bad'); feedback('bad','—','Envio encerrado — reabra para bipar'); return; }
+  const k=resolveItem(s);
   if(!k){ beep('bad'); feedback('bad','—','Não encontrado: '+s+' (EAN não cadastrado ou fora do plano)'); return; }
   const p=IT[k], cur=bipEf(k);
   if(cur>=p.plan){ beep('warn'); feedback('warn',p.sku_original||k,'EXCESSO — tamanho '+(p.tamanho||'')+' já fechou ('+p.plan+')',p.plan+' / '+p.plan); return; }
   addEvento(k,1); const now=cur+1;
-  beep('ok'); feedback('ok',p.sku_original||k,(now===p.plan?'✓ FECHOU — ':'ok · ')+(p.tamanho||'')+' · pai '+p.pai,now+' de '+p.plan);
+  beep(now===p.plan?'done':'ok'); feedback('ok',p.sku_original||k,(now===p.plan?'✓ FECHOU — ':'ok · ')+(p.tamanho||'')+' · pai '+p.pai,now+' de '+p.plan);
 }
+
+/* ---------- histórico de bipagens de um item (banco + fila ainda não enviada desta máquina) ---------- */
+let HK=null, HKT=null;
+async function abrirHist(k,silencioso){
+  if(!E||!IT[k]) return; HK=k; const p=IT[k], box=$('histBox');
+  if(!silencioso){ box.classList.remove('hidden'); box.innerHTML='<div class="skelbox"><div class="skel"></div><div class="skel" style="width:60%"></div></div>'; box.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  let serv=[], aviso='';
+  try{ const r=await call('full_historico',{p_envio:E.id,p_sku:k}); serv=r.eventos||[]; }
+  catch(e){
+    aviso=(e&&e.http&&/PGRST202|Could not find the function/i.test(e.msg||''))
+      ? 'Falta a função <b>full_historico</b> no banco — rode o <code>supabase_full_historico.sql</code> no SQL Editor do Supabase. Enquanto isso, só aparecem as bipagens ainda na fila desta máquina.'
+      : '<b>Não consegui buscar o histórico no banco.</b> '+esc(errMsg(e))+' Só aparecem as bipagens ainda na fila desta máquina.';
+  }
+  if(HK!==k||!E||!IT[k]) return;                                    // abriu outro item (ou fechou) enquanto carregava
+  const ids=new Set(serv.map(x=>x.id));
+  const loc=S.fila.filter(ev=>ev.envio_id===E.id&&ev.sku===k&&!ids.has(ev.id)).map(ev=>({id:ev.id,ts:ev.ts,delta:ev.delta,maquina:ev.maquina,baixado:false,fila:true}));
+  const all=serv.concat(loc).sort((a,b)=>new Date(a.ts)-new Date(b.ts)); let acc=0; all.forEach(x=>{ acc+=x.delta; x.acc=acc; });
+  const mais=all.filter(x=>x.delta>0).length, menos=all.length-mais;
+  const fmt=t=>new Date(t).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'medium'});
+  const rows=all.slice().reverse().map(x=>`<tr><td class="num" style="text-align:left">${esc(fmt(x.ts))}</td><td>${esc(x.maquina||'—')}</td><td>${x.delta>0?'<span class="tag tag-info">+1 bipou</span>':'<span class="tag tag-warn">−1 desfez</span>'}</td><td class="num">${x.acc}</td><td>${x.fila?'<span class="tag tag-info">na fila (ainda não enviado)</span>':(x.baixado?'<span class="tag tag-ok">✓ baixado</span>':'<span class="tag tag-neutral">não baixado</span>')}</td></tr>`).join('');
+  const dif=(!aviso&&acc!==bipEf(k))?`<div class="muted" style="margin-top:6px">O saldo do histórico (${acc}) difere do estado da conferência (${bipEf(k)}) — outra máquina pode ter bipado agora; atualize a tela.</div>`:'';
+  $('histBox').innerHTML=`<div class="title-row"><h3 style="font-size:16px;font-weight:800;color:var(--navy-700)">Histórico de bipagens</h3><span class="sku">${esc(p.sku_original||k)}</span><span class="muted">tamanho ${esc(p.tamanho||'—')} · ${esc((p.titulo||'').slice(0,70))}</span><div class="push"><button class="btn btn-ghost" id="histFechar">Fechar</button></div></div>
+    ${aviso?bannerHtml('warn','<div>'+aviso+'</div>'):''}
+    <div class="muted" style="margin:8px 0">${all.length} evento(s): ${mais} bipagem(ns) e ${menos} desfeita(s) · saldo <b>${acc}</b> de ${p.plan} planejados</div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Data e hora</th><th>Máquina</th><th>Ação</th><th class="num">Acumulado</th><th>Situação</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="5" style="text-align:center;color:var(--text-2);padding:16px">Nenhuma bipagem deste item.</td></tr>'}</tbody></table></div>${dif}`;
+  $('histFechar').onclick=()=>{ HK=null; $('histBox').classList.add('hidden'); $('ean').focus(); };
+}
+$('histQ').addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return; e.preventDefault();
+  const q=$('histQ').value.trim(); if(!q||!E) return;
+  const k=resolveItem(q);
+  if(!k){ beep('bad'); feedback('bad','—','Item não encontrado: '+q+' (EAN não cadastrado ou fora do plano)'); return; }
+  $('histQ').value=''; abrirHist(k); $('ean').focus();
+});
+$('confBody').addEventListener('click',e=>{ const b=e.target.closest('[data-hist]'); if(b) abrirHist(b.dataset.hist); });
 $('btnUndo').onclick=()=>{
   if(!E||E.encerrado_em) return;
   while(HIST.length){ const k=HIST.pop(); if(bipEf(k)>0){ LS.set('fc_full_hist_'+E.id,JSON.stringify(HIST)); addEvento(k,-1); feedback('warn',IT[k].sku_original||k,'desfeito',bipEf(k)+' de '+IT[k].plan); $('ean').focus(); return; } }
@@ -1257,7 +1404,7 @@ function renderConf(){
       else if(b<p.plan) sit='<span class="tag tag-info">parcial</span>';
       else if(b===p.plan){ sit='<span class="tag tag-ok">✓ conferido</span>'; cls='done'; }
       else { sit='<span class="tag tag-bad">excesso</span>'; cls='over'; }
-      linhas.push(`<tr class="${cls}"><td><span class="sku">${esc(p.sku_original||k)}</span></td><td><div class="trunc">${esc(p.titulo||'')}</div></td><td class="num">${p.plan}</td><td class="num">${b}</td><td class="num ${falta>0?'':'neg'}">${falta>0?falta:(falta<0?'+'+(-falta):'0')}</td><td><div class="bar"><i style="width:${pct}%"></i></div></td><td>${sit}</td></tr>`);
+      linhas.push(`<tr class="${cls}"><td><span class="sku">${esc(p.sku_original||k)}</span> <button class="btn btn-ghost" data-hist="${esc(k)}" title="Ver histórico de bipagens deste item" style="padding:2px 8px;font-size:12px">Histórico</button></td><td><div class="trunc">${esc(p.titulo||'')}</div></td><td class="num">${p.plan}</td><td class="num">${b}</td><td class="num ${falta>0?'':'neg'}">${falta>0?falta:(falta<0?'+'+(-falta):'0')}</td><td><div class="bar"><i style="width:${pct}%"></i></div></td><td>${sit}</td></tr>`);
     });
     if(linhas.length) rows.push(`<tr class="grp"><td colspan="7"><span class="sku">${esc(g.pai)}</span> &nbsp;<span style="color:var(--text-2)">${esc((g.titulo||'').slice(0,60))}</span> &nbsp;<span class="pill">${g.bip} / ${g.plan}</span> ${g.bip>=g.plan?'<span class="tag tag-ok">✓ pai conferido</span>':(g.bip>0?'<span class="tag tag-info">em andamento</span>':'')}</td></tr>`+linhas.join(''));
   });
@@ -1384,7 +1531,7 @@ async function renderEtq(){
   renderPending(); updateGerar();
 }
 function selQtd(){ const q={}; let n=0; ETQ.sel.forEach(p=>{ ORDER.filter(k=>IT[k].pai===p).forEach(k=>{ const c=etqQtd(k); if(c>0){ q[k]=c; n+=c; } }); }); return {q,n}; }
-function updateGerar(){ const {n}=selQtd(); $('btnGerarZpl').textContent='Gerar ZPL ('+nf.format(n)+' etiqueta'+(n===1?'':'s')+')'; $('btnGerarZpl').disabled=!n; }
+function updateGerar(){ const {n}=selQtd(); $('btnGerarZpl').textContent='Gerar etiquetas ('+nf.format(n)+')'; $('btnGerarZpl').disabled=!n; }
 $('etqModo').onchange=renderEtq;
 $('etqSelConf').onclick=()=>{ ETQ.sel=new Set(paisResumo().filter(g=>g.skus.some(k=>etqQtd(k)>0)).map(g=>g.pai)); renderEtq(); };
 $('etqSelTodos').onclick=()=>{ ETQ.sel=new Set(paisResumo().map(g=>g.pai)); renderEtq(); };
@@ -1393,14 +1540,16 @@ $('btnGerarZpl').onclick=()=>{
   const {q,n}=selQtd(); if(!n) return;
   const porKey={}; Object.keys(q).forEach(k=>{ porKey[loose(k)]=(porKey[loose(k)]||0)+q[k]; });
   const {labels}=zplSelecionar(ETQ.labels,porKey);
-  const nome='etiquetas_'+slug(E.nome)+'_'+[...ETQ.sel].length+'pais_'+hora(new Date()).replace(/:/g,'')+'.zpl';
-  dl(zplBuild(labels),nome,'text/plain');
-  ETQ.pending={itens:Object.keys(q).map(k=>({sku:k,qtd:q[k]})),n:labels.length,pais:[...ETQ.sel],nome};
+  const prn=prnAtual(), tspl=prn.lang==='tspl', stats={cortadas:0};
+  const base='etiquetas_'+slug(E.nome)+'_'+[...ETQ.sel].length+'pais_'+hora(new Date()).replace(/:/g,'');
+  const nome=base+(tspl?'_tspl.tspl':'.zpl');
+  if(tspl) dlLatin1(tsplBuild(labels,tsplCfg(),stats),nome); else dl(zplBuild(labels),nome,'text/plain');
+  ETQ.pending={itens:Object.keys(q).map(k=>({sku:k,qtd:q[k]})),n:labels.length,pais:[...ETQ.sel],nome,prn:(prn.ap||'Impressora')+' · '+prn.lang.toUpperCase(),cortadas:stats.cortadas};
   renderPending();
 };
 function renderPending(){
   const p=ETQ.pending; if(!p){ $('etqPending').innerHTML=''; return; }
-  $('etqPending').innerHTML=bannerHtml('info',`<div class="grow"><b>${nf.format(p.n)} etiquetas</b> de ${p.pais.length} produto(s)-pai geradas em <code>${esc(p.nome)}</code>. Depois de imprimir, marque como impresso — assim o próximo lote não repete.</div><button class="btn btn-secondary" id="btnMarcarImp">Marcar como impresso</button><button class="btn btn-ghost" id="btnDescartarImp">Descartar</button>`);
+  $('etqPending').innerHTML=bannerHtml('info',`<div class="grow"><b>${nf.format(p.n)} etiquetas</b> de ${p.pais.length} produto(s)-pai geradas para <b>${esc(p.prn||'a impressora')}</b> em <code>${esc(p.nome)}</code>.${p.cortadas?` <b>${p.cortadas}</b> título(s) passaram de 2 linhas e foram cortados.`:''} Depois de imprimir, marque como impresso — assim o próximo lote não repete.</div><button class="btn btn-secondary" id="btnMarcarImp">Marcar como impresso</button><button class="btn btn-ghost" id="btnDescartarImp">Descartar</button>`);
   $('btnMarcarImp').onclick=async()=>{
     $('btnMarcarImp').disabled=true;
     try{ await call('full_registrar_impressao',{p_envio:E.id,p_maquina:S.maquina,p_itens:p.itens}); ETQ.pending=null; ETQ.sel=new Set(); await refreshEstado(); renderEnvioAtual(); renderEtq(); }
@@ -1415,19 +1564,44 @@ function loadZplEnv(buf){
 }
 wireDrop('dzZplEnv','fZplEnv',loadZplEnv);
 /* impressoras (até 2): apelido + nome do compartilhamento; cada uma gera o próprio .bat */
-function loadPrn(){ let p=[]; try{ p=JSON.parse(LS.get('fc_impressoras')||'[]'); }catch(e){} return [p[0]||{ap:'Zebra ZT220',sh:''},p[1]||{ap:'Tomate',sh:''}]; }
-function savePrn(){ LS.set('fc_impressoras',JSON.stringify([{ap:$('prn1Ap').value.trim(),sh:$('prn1Sh').value.trim()},{ap:$('prn2Ap').value.trim(),sh:$('prn2Sh').value.trim()}])); }
-(function initPrn(){ const p=loadPrn(); $('prn1Ap').value=p[0].ap; $('prn1Sh').value=p[0].sh; $('prn2Ap').value=p[1].ap; $('prn2Sh').value=p[1].sh; })();
-['prn1Ap','prn1Sh','prn2Ap','prn2Sh'].forEach(id=>$(id).addEventListener('change',savePrn));
+function loadPrn(){
+  let p=[]; try{ p=JSON.parse(LS.get('fc_impressoras')||'[]'); }catch(e){}
+  const d=[{ap:'Zebra ZT220',sh:'',lang:'zpl'},{ap:'Tomate',sh:'',lang:'tspl'}];
+  return d.map((x,i)=>{ const o=Object.assign({},x,p[i]||{}); if(!/^(zpl|tspl)$/.test(o.lang)) o.lang=x.lang; return o; });
+}
+function savePrn(){
+  LS.set('fc_impressoras',JSON.stringify([1,2].map(n=>({ap:$('prn'+n+'Ap').value.trim(),sh:$('prn'+n+'Sh').value.trim(),lang:$('prn'+n+'Lang').value}))));
+  refreshPrnSel();
+}
+function saveTom(){ LS.set('fc_tomate',JSON.stringify({ref:$('tomRef').value,step:$('tomStep').value,acento:$('tomAcento').checked})); }
+function prnAtual(){ return loadPrn()[$('etqPrn').value==='2'?1:0]; }
+function refreshPrnSel(){
+  const p=loadPrn(), sel=$('etqPrn'), cur=sel.value||LS.get('fc_prn_sel')||'1';
+  sel.innerHTML=p.map((x,i)=>`<option value="${i+1}">${esc(x.ap||('Impressora '+(i+1)))} · ${x.lang.toUpperCase()}</option>`).join('');
+  sel.value=cur==='2'?'2':'1';
+}
+(function initPrn(){
+  const p=loadPrn(), t=tsplCfg();
+  [1,2].forEach(n=>{ $('prn'+n+'Ap').value=p[n-1].ap; $('prn'+n+'Sh').value=p[n-1].sh; $('prn'+n+'Lang').value=p[n-1].lang; });
+  $('tomRef').value=t.ref; $('tomStep').value=t.step; $('tomAcento').checked=t.acento;
+  refreshPrnSel();
+})();
+['prn1Ap','prn1Sh','prn1Lang','prn2Ap','prn2Sh','prn2Lang'].forEach(id=>$(id).addEventListener('change',savePrn));
+['tomRef','tomStep','tomAcento'].forEach(id=>$(id).addEventListener('change',saveTom));
+$('etqPrn').addEventListener('change',()=>{ LS.set('fc_prn_sel',$('etqPrn').value); updateGerar(); });
 function baixarBat(n){
   savePrn(); const ap=$('prn'+n+'Ap').value.trim()||('Impressora '+n), sh=$('prn'+n+'Sh').value.trim();
   if(!sh){ alert('Escreva o nome do compartilhamento da '+ap+'.'); $('prn'+n+'Sh').focus(); return; }
   const lim=t=>t.replace(/[%"&|<>^]/g,'');
-  const bat=['@echo off','setlocal','set PRINTER='+lim(sh),'if "%~1"=="" (','  echo Impressora: '+lim(ap),'  echo Arraste o arquivo .zpl para cima deste .bat','  pause','  exit /b 1',')','echo Enviando para '+lim(ap)+'...','copy /b "%~1" "\\\\localhost\\%PRINTER%"','if errorlevel 1 (echo FALHOU: confira o nome do compartilhamento de '+lim(ap)+') else (echo Enviado para '+lim(ap)+')','pause',''].join('\r\n');
+  const bat=['@echo off','setlocal','set PRINTER='+lim(sh),'if "%~1"=="" (','  echo Impressora: '+lim(ap),'  echo Arraste o arquivo de etiquetas para cima deste .bat','  pause','  exit /b 1',')','echo Enviando para '+lim(ap)+'...','copy /b "%~1" "\\\\localhost\\%PRINTER%"','if errorlevel 1 (echo FALHOU: confira o nome do compartilhamento de '+lim(ap)+') else (echo Enviado para '+lim(ap)+')','pause',''].join('\r\n');
   dl(bat,'imprimir_'+slug(ap)+'.bat','application/octet-stream');
 }
 $('btnBat1').onclick=()=>baixarBat(1); $('btnBat2').onclick=()=>baixarBat(2);
-$('btnTesteZpl').onclick=()=>dl('^XA^CI28\n^FO2,2^GB402,186,3^FS\n^FO408,2^GB402,186,3^FS\n^FO22,60^A0N,34,34^FDCOLUNA 1^FS\n^FO430,60^A0N,34,34^FDCOLUNA 2^FS\n^FO22,110^A0N,22,22^FDTeste ZPL - FanClub^FS\n^FO430,110^A0N,22,22^FDTeste ZPL - FanClub^FS\n^XZ\n','teste_alinhamento.zpl','text/plain');
+$('btnTesteZpl').onclick=()=>{
+  const prn=prnAtual();
+  if(prn.lang==='tspl'){ saveTom(); dlLatin1(tsplTeste(tsplCfg()),'teste_alinhamento_tomate.tspl'); }
+  else dl('^XA^CI28\n^FO2,2^GB402,186,3^FS\n^FO408,2^GB402,186,3^FS\n^FO22,60^A0N,34,34^FDCOLUNA 1^FS\n^FO430,60^A0N,34,34^FDCOLUNA 2^FS\n^FO22,110^A0N,22,22^FDTeste ZPL - FanClub^FS\n^FO430,110^A0N,22,22^FDTeste ZPL - FanClub^FS\n^XZ\n','teste_alinhamento.zpl','text/plain');
+};
 
 /* ---------- separação c/ localização ---------- */
 let locSort={k:'necessidade',dir:-1}, LOCMAN={};
