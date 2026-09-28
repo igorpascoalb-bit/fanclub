@@ -477,14 +477,18 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
             <div class="field"><label for="prn1Ap">Impressora 1</label><input type="text" id="prn1Ap" placeholder="ex.: Zebra ZT220"></div>
             <div class="field"><label for="prn1Sh">Nome do compartilhamento</label><input type="text" id="prn1Sh" placeholder="ex.: ZT220"></div>
             <div class="field"><label for="prn1Lang">Linguagem</label><select id="prn1Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
-            <button class="btn btn-secondary" id="btnBat1" style="align-self:flex-end">Baixar .bat</button>
+            <button class="btn btn-ghost" id="btnBat1" style="align-self:flex-end">Baixar .bat manual</button>
+            <button class="btn btn-primary" id="btnAuto1" style="align-self:flex-end">Instalar impressão automática</button>
           </div>
+          <p class="muted" style="margin:2px 0 10px">A impressão automática instala um serviço que fica de olho na pasta Downloads e manda para esta impressora sozinho, assim que o arquivo é gerado — sem precisar arrastar nada. Baixe e dê duplo clique uma vez; continua ativo mesmo depois de reiniciar o PC. Só funciona se os downloads do navegador caem na pasta Downloads (padrão do Chrome/Edge). O <code>.bat</code> manual acima continua disponível como alternativa.</p>
           <div class="filters" style="margin-bottom:var(--sp-2)">
             <div class="field"><label for="prn2Ap">Impressora 2</label><input type="text" id="prn2Ap" placeholder="ex.: Tomate"></div>
             <div class="field"><label for="prn2Sh">Nome do compartilhamento</label><input type="text" id="prn2Sh" placeholder="ex.: Tomate"></div>
             <div class="field"><label for="prn2Lang">Linguagem</label><select id="prn2Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
-            <button class="btn btn-secondary" id="btnBat2" style="align-self:flex-end">Baixar .bat</button>
+            <button class="btn btn-ghost" id="btnBat2" style="align-self:flex-end">Baixar .bat manual</button>
+            <button class="btn btn-primary" id="btnAuto2" style="align-self:flex-end">Instalar impressão automática</button>
           </div>
+          <p class="muted" style="margin:2px 0 10px">A impressão automática instala um serviço que fica de olho na pasta Downloads e manda para esta impressora sozinho, assim que o arquivo é gerado — sem precisar arrastar nada. Baixe e dê duplo clique uma vez; continua ativo mesmo depois de reiniciar o PC. Só funciona se os downloads do navegador caem na pasta Downloads (padrão do Chrome/Edge). O <code>.bat</code> manual acima continua disponível como alternativa.</p>
           <p class="muted" style="margin:10px 0 6px"><b>Ajuste fino da Tomate (TSPL)</b> — bobina 50x25 em duas colunas. Os valores abaixo já vêm calibrados; só mexa se o alinhamento mudar.</p>
           <div class="filters" style="margin-bottom:var(--sp-2)">
             <div class="field"><label for="tomRef">Margem esquerda (REFERENCE, pontos)</label><input type="number" id="tomRef" min="0" max="120" step="1"></div>
@@ -1589,6 +1593,74 @@ function refreshPrnSel(){
 ['prn1Ap','prn1Sh','prn1Lang','prn2Ap','prn2Sh','prn2Lang'].forEach(id=>$(id).addEventListener('change',savePrn));
 ['tomRef','tomStep','tomAcento'].forEach(id=>$(id).addEventListener('change',saveTom));
 $('etqPrn').addEventListener('change',()=>{ LS.set('fc_prn_sel',$('etqPrn').value); updateGerar(); });
+/* ---- impressão automática (Windows): vigia a pasta Downloads e manda pro compartilhamento sozinho ---- */
+function autoPs1(share,ext,label){
+  const esc=t=>String(t).replace(/"/g,'`"').replace(/\$/g,'`$');
+  return [
+'$share = "'+esc(share)+'"',
+'$pasta = "$env:USERPROFILE\\Downloads"',
+'$pattern = "*.'+ext+'"',
+'$done = Join-Path $pasta "impressas"',
+'if (!(Test-Path $done)) { New-Item -ItemType Directory -Path $done | Out-Null }',
+'',
+'$fsw = New-Object System.IO.FileSystemWatcher($pasta, $pattern)',
+'$fsw.IncludeSubdirectories = $false',
+'$fsw.EnableRaisingEvents = $true',
+'',
+'$dados = New-Object psobject -Property @{ Share = $share; Done = $done; Label = "'+esc(label)+'" }',
+'',
+'Register-ObjectEvent -InputObject $fsw -EventName Created -MessageData $dados -Action {',
+'    $info = $Event.MessageData',
+'    $path = $Event.SourceEventArgs.FullPath',
+'    Start-Sleep -Milliseconds 500',
+'    $lastSize = -1',
+'    do {',
+'        Start-Sleep -Milliseconds 300',
+'        if (!(Test-Path $path)) { return }',
+'        $size = (Get-Item $path).Length',
+'        $stable = ($size -eq $lastSize)',
+'        $lastSize = $size',
+'    } while (-not $stable)',
+'    try {',
+'        Copy-Item -LiteralPath $path -Destination ("\\\\localhost\\" + $info.Share) -ErrorAction Stop',
+'        $destino = Join-Path $info.Done (Split-Path $path -Leaf)',
+'        Move-Item -LiteralPath $path -Destination $destino -Force -ErrorAction SilentlyContinue',
+'        [console]::Beep(1000,150)',
+'    } catch {',
+'        Add-Type -AssemblyName System.Windows.Forms',
+'        [System.Windows.Forms.MessageBox]::Show("Nao consegui enviar para a " + $info.Label + " (" + $info.Share + "): " + $_.Exception.Message, "Erro de impressao FanClub")',
+'    }',
+'} | Out-Null',
+'',
+'while ($true) { Start-Sleep -Seconds 3600 }',
+''].join('\r\n');
+}
+function b64(str){
+  const u=new TextEncoder().encode(str); let bin=''; u.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin);
+}
+function autoBat(n,ap,sh,lang,acao){
+  const lim=t=>t.replace(/[%"&|<>^]/g,''), tn='FanClub Impressao '+lim(sh);
+  if(acao==='remover'){
+    return ['@echo off','schtasks /delete /tn "'+tn+'" /f','echo Impressao automatica da '+lim(ap)+' removida.','pause',''].join('\r\n');
+  }
+  const ext=lang==='tspl'?'tspl':'zpl', ps1=autoPs1(sh,ext,ap), b64ps1=b64(ps1);
+  return ['@echo off','setlocal','set "APPDIR=%APPDATA%\\FanClubImpressao"','if not exist "%APPDIR%" mkdir "%APPDIR%"',
+    'set "SCRIPT=%APPDIR%\\watch_'+lim(sh)+'.ps1"',
+    'powershell -NoProfile -ExecutionPolicy Bypass -Command "$b=[Convert]::FromBase64String(\''+b64ps1+'\');[IO.File]::WriteAllBytes(\'%SCRIPT%\',$b)"',
+    'schtasks /create /tn "'+tn+'" /tr "powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"%SCRIPT%\"" /sc onlogon /f',
+    'start "" powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%SCRIPT%"',
+    'echo Pronto! A partir de agora, os arquivos gerados para a '+lim(ap)+' vao direto pra impressora.',
+    'echo Essa janela pode ser fechada.','pause',''].join('\r\n');
+}
+function autoAcao(n,acao){
+  savePrn(); const p=loadPrn()[n-1];
+  if(!p.sh){ alert('Escreva o nome do compartilhamento da '+(p.ap||('Impressora '+n))+'.'); $('prn'+n+'Sh').focus(); return; }
+  const bat=autoBat(n,p.ap||('Impressora '+n),p.sh,p.lang,acao);
+  dl(bat,(acao==='remover'?'remover_impressao_automatica_':'instalar_impressao_automatica_')+slug(p.sh)+'.bat','application/octet-stream');
+}
+$('btnAuto1').onclick=()=>autoAcao(1,'instalar'); $('btnAuto2').onclick=()=>autoAcao(2,'instalar');
+
 function baixarBat(n){
   savePrn(); const ap=$('prn'+n+'Ap').value.trim()||('Impressora '+n), sh=$('prn'+n+'Sh').value.trim();
   if(!sh){ alert('Escreva o nome do compartilhamento da '+ap+'.'); $('prn'+n+'Sh').focus(); return; }
