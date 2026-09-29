@@ -275,7 +275,7 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
     <button class="btn btn-ghost" id="btnEnvios">Envios</button>
     <button class="btn btn-ghost" id="btnSair">Sair</button>
   </div>
-  <span class="tag tag-neutral" id="verTag">v11.0</span>
+  <span class="tag tag-neutral" id="verTag">v12.0</span>
 </header>
 
 <main class="app">
@@ -453,6 +453,20 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
         <div class="banner banner-info">Este envio ainda não tem o arquivo de etiquetas do ML. Anexe o <b>.txt (ZPL)</b> para gerar etiquetas por produto-pai.</div>
         <div class="dropzone" id="dzZplEnv" tabindex="0"><strong>Etiquetas ML (ZPL)</strong><small>Envio-…-Etiquetas-de-produtos.txt</small><input type="file" id="fZplEnv" accept=".txt,.zpl" class="hidden"></div>
       </div>
+      <div id="etqShopee" class="hidden">
+        <div class="banner banner-info">Este envio é da Shopee — não tem arquivo de etiquetas para anexar. A ferramenta gera a etiqueta (QR + Seller SKU) na hora, 60x40mm, para a Zebra.</div>
+        <div class="filters" style="margin-bottom:var(--sp-3)">
+          <div class="field"><label for="etqShModo">O que imprimir</label>
+            <select id="etqShModo"><option value="conf">Conferido e ainda não impresso</option><option value="falta">Tudo do plano que falta imprimir</option><option value="tudo">Reimprimir tudo do plano</option></select></div>
+          <div class="field"><label for="etqShPrn">Imprimir na</label><select id="etqShPrn"></select></div>
+          <button class="btn btn-primary" id="btnGerarZplShopee" style="margin-left:auto">Gerar etiquetas Shopee</button>
+        </div>
+        <div id="etqShPending"></div>
+        <div class="tbl-wrap">
+          <table class="tbl"><thead><tr><th>Produto-pai</th><th>Produto</th><th class="num">Planejado</th><th class="num">Bipado</th><th class="num">Impresso</th><th class="num">A imprimir</th></tr></thead>
+          <tbody id="etqShBody"></tbody></table>
+        </div>
+      </div>
       <div id="etqReady" class="hidden">
         <div class="kpis" id="etqKpis" style="margin-bottom:var(--sp-3)"></div>
         <div id="etqBanners"></div>
@@ -470,35 +484,35 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
           <table class="tbl"><thead><tr><th style="width:36px"></th><th>Produto-pai</th><th>Produto</th><th class="num">Planejado</th><th class="num">Bipado</th><th class="num">Impresso</th><th class="num">A imprimir</th><th>Situação</th></tr></thead>
           <tbody id="etqBody"></tbody></table>
         </div>
-        <details class="box">
-          <summary>Impressoras (Windows)</summary>
-          <p class="muted" style="margin:8px 0">Cada impressora precisa estar instalada e <b>compartilhada</b> no Windows (Propriedades → Compartilhamento). Escreva o nome do compartilhamento (sem espaços), escolha a linguagem dela e baixe o <code>.bat</code> — uma vez só. Para imprimir, escolha a impressora em “Imprimir na”, gere o arquivo e arraste-o para cima do <code>.bat</code> dessa impressora.</p>
-          <div class="filters" style="margin-bottom:var(--sp-2)">
-            <div class="field"><label for="prn1Ap">Impressora 1</label><input type="text" id="prn1Ap" placeholder="ex.: Zebra ZT220"></div>
-            <div class="field"><label for="prn1Sh">Nome do compartilhamento</label><input type="text" id="prn1Sh" placeholder="ex.: ZT220"></div>
-            <div class="field"><label for="prn1Lang">Linguagem</label><select id="prn1Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
-            <button class="btn btn-ghost" id="btnBat1" style="align-self:flex-end">Baixar .bat manual</button>
-            <button class="btn btn-primary" id="btnAuto1" style="align-self:flex-end">Instalar impressão automática</button>
-          </div>
-          <p class="muted" style="margin:2px 0 10px">A impressão automática instala um serviço que fica de olho na pasta Downloads e manda para esta impressora sozinho, assim que o arquivo é gerado — sem precisar arrastar nada. Baixe e dê duplo clique uma vez; continua ativo mesmo depois de reiniciar o PC. Só funciona se os downloads do navegador caem na pasta Downloads (padrão do Chrome/Edge). O <code>.bat</code> manual acima continua disponível como alternativa.</p>
-          <div class="filters" style="margin-bottom:var(--sp-2)">
-            <div class="field"><label for="prn2Ap">Impressora 2</label><input type="text" id="prn2Ap" placeholder="ex.: Tomate"></div>
-            <div class="field"><label for="prn2Sh">Nome do compartilhamento</label><input type="text" id="prn2Sh" placeholder="ex.: Tomate"></div>
-            <div class="field"><label for="prn2Lang">Linguagem</label><select id="prn2Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
-            <button class="btn btn-ghost" id="btnBat2" style="align-self:flex-end">Baixar .bat manual</button>
-            <button class="btn btn-primary" id="btnAuto2" style="align-self:flex-end">Instalar impressão automática</button>
-          </div>
-          <p class="muted" style="margin:2px 0 10px">A impressão automática instala um serviço que fica de olho na pasta Downloads e manda para esta impressora sozinho, assim que o arquivo é gerado — sem precisar arrastar nada. Baixe e dê duplo clique uma vez; continua ativo mesmo depois de reiniciar o PC. Só funciona se os downloads do navegador caem na pasta Downloads (padrão do Chrome/Edge). O <code>.bat</code> manual acima continua disponível como alternativa.</p>
-          <p class="muted" style="margin:10px 0 6px"><b>Ajuste fino da Tomate (TSPL)</b> — bobina 50x25 em duas colunas. Os valores abaixo já vêm calibrados; só mexa se o alinhamento mudar.</p>
-          <div class="filters" style="margin-bottom:var(--sp-2)">
-            <div class="field"><label for="tomRef">Margem esquerda (REFERENCE, pontos)</label><input type="number" id="tomRef" min="0" max="120" step="1"></div>
-            <div class="field"><label for="tomStep">Passo da coluna 2 (pontos)</label><input type="number" id="tomStep" min="300" max="500" step="1"></div>
-            <label class="chk" style="align-self:flex-end"><input type="checkbox" id="tomAcento"> manter acentos (CODEPAGE 1252)</label>
-          </div>
-          <p class="muted" style="margin:10px 0 6px">Antes do primeiro lote, imprima o teste na impressora escolhida em “Imprimir na”: ele desenha uma moldura nas duas colunas e confere se a impressora aceita a linguagem e se a largura bate. Na Tomate, marque “manter acentos” e imprima o teste para ver se a linha “Tênis Anatômico ção” sai correta; se sair com símbolos estranhos, deixe desmarcado (os acentos são removidos).</p>
-          <button class="btn btn-ghost" id="btnTesteZpl">Baixar teste de alinhamento</button>
-        </details>
       </div>
+      <details class="box">
+        <summary>Impressoras (Windows)</summary>
+        <p class="muted" style="margin:8px 0">Cada impressora precisa estar instalada e <b>compartilhada</b> no Windows (Propriedades → Compartilhamento). Escreva o nome do compartilhamento (sem espaços), escolha a linguagem dela e baixe o <code>.bat</code> — uma vez só. Para imprimir, escolha a impressora em “Imprimir na”, gere o arquivo e arraste-o para cima do <code>.bat</code> dessa impressora.</p>
+        <div class="filters" style="margin-bottom:var(--sp-2)">
+          <div class="field"><label for="prn1Ap">Impressora 1</label><input type="text" id="prn1Ap" placeholder="ex.: Zebra ZT220"></div>
+          <div class="field"><label for="prn1Sh">Nome do compartilhamento</label><input type="text" id="prn1Sh" placeholder="ex.: ZT220"></div>
+          <div class="field"><label for="prn1Lang">Linguagem</label><select id="prn1Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
+          <button class="btn btn-ghost" id="btnBat1" style="align-self:flex-end">Baixar .bat manual</button>
+          <button class="btn btn-primary" id="btnAuto1" style="align-self:flex-end">Instalar impressão automática</button>
+        </div>
+        <p class="muted" style="margin:2px 0 10px">A impressão automática instala um serviço que fica de olho na pasta Downloads e manda para esta impressora sozinho, assim que o arquivo é gerado — sem precisar arrastar nada. Baixe e dê duplo clique uma vez; continua ativo mesmo depois de reiniciar o PC. Só funciona se os downloads do navegador caem na pasta Downloads (padrão do Chrome/Edge). O <code>.bat</code> manual acima continua disponível como alternativa.</p>
+        <div class="filters" style="margin-bottom:var(--sp-2)">
+          <div class="field"><label for="prn2Ap">Impressora 2</label><input type="text" id="prn2Ap" placeholder="ex.: Tomate"></div>
+          <div class="field"><label for="prn2Sh">Nome do compartilhamento</label><input type="text" id="prn2Sh" placeholder="ex.: Tomate"></div>
+          <div class="field"><label for="prn2Lang">Linguagem</label><select id="prn2Lang"><option value="zpl">ZPL (Zebra)</option><option value="tspl">TSPL (Tomate)</option></select></div>
+          <button class="btn btn-ghost" id="btnBat2" style="align-self:flex-end">Baixar .bat manual</button>
+          <button class="btn btn-primary" id="btnAuto2" style="align-self:flex-end">Instalar impressão automática</button>
+        </div>
+        <p class="muted" style="margin:2px 0 10px">A impressão automática instala um serviço que fica de olho na pasta Downloads e manda para esta impressora sozinho, assim que o arquivo é gerado — sem precisar arrastar nada. Baixe e dê duplo clique uma vez; continua ativo mesmo depois de reiniciar o PC. Só funciona se os downloads do navegador caem na pasta Downloads (padrão do Chrome/Edge). O <code>.bat</code> manual acima continua disponível como alternativa.</p>
+        <p class="muted" style="margin:10px 0 6px"><b>Ajuste fino da Tomate (TSPL)</b> — bobina 50x25 em duas colunas, usada na conferência do ML. Os valores abaixo já vêm calibrados; só mexa se o alinhamento mudar.</p>
+        <div class="filters" style="margin-bottom:var(--sp-2)">
+          <div class="field"><label for="tomRef">Margem esquerda (REFERENCE, pontos)</label><input type="number" id="tomRef" min="0" max="120" step="1"></div>
+          <div class="field"><label for="tomStep">Passo da coluna 2 (pontos)</label><input type="number" id="tomStep" min="300" max="500" step="1"></div>
+          <label class="chk" style="align-self:flex-end"><input type="checkbox" id="tomAcento"> manter acentos (CODEPAGE 1252)</label>
+        </div>
+        <p class="muted" style="margin:10px 0 6px">Antes do primeiro lote, imprima o teste na impressora escolhida em “Imprimir na” (aba Etiquetas do ML): ele desenha uma moldura nas duas colunas e confere se a impressora aceita a linguagem e se a largura bate. Na Tomate, marque “manter acentos” e imprima o teste para ver se a linha “Tênis Anatômico ção” sai correta; se sair com símbolos estranhos, deixe desmarcado (os acentos são removidos).</p>
+        <button class="btn btn-ghost" id="btnTesteZpl">Baixar teste de alinhamento (bobina 50x25 do ML)</button>
+      </details>
     </div>
 
     <!-- SEPARACAO COM LOCALIZACAO -->
@@ -533,7 +547,7 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
     </div>
   </section>
 </main>
-<footer class="app-foot"><span id="footL">Conferência de envio Full · v11.0</span><span id="footR">nenhum dado carregado</span></footer>
+<footer class="app-foot"><span id="footL">Conferência de envio Full · v12.0</span><span id="footR">nenhum dado carregado</span></footer>
 
 <script>
 "use strict";
@@ -543,7 +557,7 @@ details.box summary:focus-visible{outline:none;box-shadow:var(--ring)}
    ========================================================= */
 const SUPA_URL='https://kitefyicxvyqicvvspcj.supabase.co';
 const SUPA_KEY='sb_publishable_VOMnQxKzGb89TDIxp40lHw_HU-mOcNa';
-const VERSION='v11.0';
+const VERSION='v12.0';
 
 /* ---------- util ---------- */
 const $=id=>document.getElementById(id);
@@ -858,64 +872,96 @@ async function parsePdf(buf){
   setDraft(plan,'Lista do ML (PDF)');
 }
 
-/* ---- Shopee Picking List (PDF): plano + EAN em um arquivo ---- */
+/* ---- Shopee Picking List (PDF): plano (sem EAN — o EAN vem sempre da Consulta de Derivação) ---- */
+function shpMulMat(a,b){ return [a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]]; }
+function shpApplyMat(m,x,y){ return [m[0]*x+m[2]*y+m[4], m[1]*x+m[3]*y+m[5]]; }
+async function shpThinRects(page){
+  const OPS=pdfjsLib.OPS, {fnArray,argsArray}=await page.getOperatorList();
+  let stack=[[1,0,0,1,0,0]], ctm=stack[0]; const rects=[];
+  for (let i=0;i<fnArray.length;i++){
+    const fn=fnArray[i];
+    if (fn===OPS.save) stack.push(ctm);
+    else if (fn===OPS.restore) ctm=stack.pop()||ctm;
+    else if (fn===OPS.transform) ctm=shpMulMat(ctm,argsArray[i]);
+    else if (fn===OPS.constructPath){
+      const ops=argsArray[i][0], coords=argsArray[i][1]; let ci=0;
+      for (const op of ops){
+        if (op===OPS.rectangle){ const x=coords[ci],y=coords[ci+1],w=coords[ci+2],h=coords[ci+3]; ci+=4;
+          const p1=shpApplyMat(ctm,x,y), p2=shpApplyMat(ctm,x+w,y+h);
+          rects.push({x0:Math.min(p1[0],p2[0]),x1:Math.max(p1[0],p2[0]),y0:Math.min(p1[1],p2[1]),y1:Math.max(p1[1],p2[1])}); }
+        else if (op===OPS.moveTo||op===OPS.lineTo) ci+=2; else if (op===OPS.curveTo) ci+=6;
+      }
+    }
+  }
+  return rects;
+}
+async function shpExtrairPagina(page){
+  const rects=await shpThinRects(page);
+  const outer=rects.filter(r=>(r.x1-r.x0)>400);
+  if(!outer.length) return {linhas:[],aviso:'sem moldura da tabela'};
+  const xLeft=Math.min(...outer.map(r=>r.x0)), xRight=Math.max(...outer.map(r=>r.x1));
+  const thin=rects.filter(r=>(r.x1-r.x0)<2 && (r.y1-r.y0)>5);
+  const xcount={}; thin.forEach(r=>{ const k=r.x0.toFixed(1); xcount[k]=(xcount[k]||0)+1; });
+  const cs=Object.values(xcount); if(!cs.length) return {linhas:[],aviso:'sem divisores de coluna'};
+  const maxc=Math.max(...cs);
+  const colInner=Object.keys(xcount).filter(k=>xcount[k]>=maxc*0.7).map(Number).sort((a,b)=>a-b);
+  let melhorX=null;
+  for (const x of colInner){ const rs=thin.filter(r=>Math.abs(r.x0-x)<0.15);
+    if (rs.length===maxc && rs.every(r=>(r.y1-r.y0)<150)){ melhorX=x; break; } }
+  if (melhorX===null || colInner.length!==6) return {linhas:[],aviso:'layout de colunas não reconhecido (o modelo do PDF da Shopee pode ter mudado)'};
+  const bandas=[...new Map(thin.filter(r=>Math.abs(r.x0-melhorX)<0.15).map(r=>[r.y0.toFixed(1)+','+r.y1.toFixed(1),r])).values()].sort((a,b)=>a.y0-b.y0);
+  const colX=[xLeft,...colInner,xRight];
+  const tc=await page.getTextContent();
+  const raw=tc.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5],w:it.width})).filter(it=>it.str.trim());
+  const tokens=[];
+  raw.forEach(it=>{ const L=it.str.length||1; const re=/\S+/g; let m;
+    while((m=re.exec(it.str))){ const x0=it.x+it.w*(m.index/L), x1=it.x+it.w*((m.index+m[0].length)/L);
+      tokens.push({str:m[0],x:(x0+x1)/2,y:it.y}); } });
+  function colIndex(x){ for (let i=0;i<colX.length-1;i++) if (x>=colX[i]&&x<colX[i+1]) return i; return colX.length-2; }
+  function rowIndex(y){ for (let i=0;i<bandas.length;i++) if (y<=bandas[i].y1+0.5 && y>=bandas[i].y0-0.5) return i; return -1; }
+  const hdrItem=raw.find(it=>it.str.trim()==='Qnt.');
+  const hdrBand=hdrItem?rowIndex(hdrItem.y):bandas.length-1;
+  const linhas=bandas.map(()=>({}));
+  tokens.forEach(tk=>{ const ri=rowIndex(tk.y); if(ri<0||ri===hdrBand) return;
+    (linhas[ri][colIndex(tk.x)]=linhas[ri][colIndex(tk.x)]||[]).push(tk); });
+  const JOIN=['','','',' ',' ','',''];
+  const out=[];
+  for (let ri=0;ri<linhas.length;ri++){
+    if (ri===hdrBand) continue;
+    const l=linhas[ri];
+    const cel=i=>(l[i]||[]).sort((a,b)=>(b.y-a.y)||(a.x-b.x)).map(t=>t.str).join(JOIN[i]);
+    const sku=cel(1); if(!sku) continue;
+    out.push({sku, shopee_sku_id:cel(2), nome:cel(3), variacao:cel(4), qty:+cel(6)||0});
+  }
+  return {linhas:out};
+}
+let SHOPEE_ASN=null;
 function loadPdfShopee(buf){ parsePdfShopee(buf).catch(err=>{ $('loadMsg').innerHTML='<div class="banner banner-bad">Erro lendo o PDF da Shopee: '+err.message+'</div>'; }); }
 async function parsePdfShopee(buf){
   if(!window.pdfjsLib){ throw new Error('pdf.js não carregou — precisa de internet na primeira abertura.'); }
   await ensurePdfWorker();
   const doc=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
-  let prods=[], tot=0;
+  let prods=[], tot=0, avisos=[];
   for(let p=1;p<=doc.numPages;p++){
     const page=await doc.getPage(p);
-    const vp=page.getViewport({scale:1});
-    const tc=await page.getTextContent();
-    const items=tc.items.map(it=>({s:it.str, x:it.transform[4], y:vp.height-it.transform[5]}));
-    // cabeçalhos da tabela (coluna "SKU do vendedor", "Shopee SKU ID", "SKU do Amarzém"/EAN, "Qnt. Aprovada")
-    let xVend=null,xQtd=null,xAmz=null,yTab=0;
-    items.forEach(it=>{
-      if(/vendedor/i.test(it.s)){ xVend=it.x; yTab=Math.max(yTab,it.y); }
-      if(/Aprovada/i.test(it.s)) xQtd=it.x;
-      if(/Amarz[eé]m/i.test(it.s)) xAmz=it.x;
-    });
-    if(xVend==null || xQtd==null){ continue; }  // página sem tabela (raro)
-    // x da coluna "Shopee SKU ID" = limite direito do SKU do vendedor.
-    // desambigua do título "Shopee Picking List" exigindo estar à direita do SKU e na faixa do cabeçalho.
-    let xShopee=null;
-    items.forEach(it=>{ if(/shopee/i.test(it.s) && it.x>xVend+30 && it.y>yTab-50 && it.y<yTab+8){ if(xShopee==null || it.x<xShopee) xShopee=it.x; } });
-    // acha onde a seção "Notas" começa, pra não ler o rodapé
-    let yNotas=1e9; items.forEach(it=>{ if(/^Notas$/i.test(it.s) && it.y<yNotas) yNotas=it.y; });
-    const inTab = it => it.y>yTab+5 && it.y<yNotas-3;
-    // âncora de cada produto = valor numérico puro na coluna Qnt. Aprovada
-    const anchors = items.filter(it=> inTab(it) && it.x>=xQtd-5 && /^\d+$/.test(it.s.trim()))
-                          .sort((a,b)=>a.y-b.y);
-    for(let i=0;i<anchors.length;i++){
-      const y0=anchors[i].y, y1=(i+1<anchors.length)?anchors[i+1].y:yNotas;
-      // SKU do vendedor: só a 1ª coluna (à esquerda da "Shopee SKU ID"); pode quebrar em 2 linhas.
-      // dupla trava: (1) posição < coluna Shopee  (2) formato ref/cor/tamanho = só dígitos, ponto e hífen
-      // -> descarta Shopee SKU ID (tem "_"), Nome do Produto (letras) e Variação, mesmo se a coluna variar de fonte.
-      const xRight = xShopee!=null ? xShopee-8 : xVend+78;
-      const skuParts=items.filter(it=> inTab(it) && it.x>xVend-12 && it.x<xRight && it.y>=y0-3 && it.y<y1-3
-                                       && /^[0-9][0-9.\-]*$/.test(it.s.trim()))
-                           .sort((a,b)=>a.y-b.y).map(it=>it.s.trim());
-      const sku=skuParts.join('');
-      if(!sku || !/\d/.test(sku)) continue;
-      // SKU do Amarzém: concatena dígitos e pega os 13 primeiros = EAN
-      const amzParts = xAmz!=null ? items.filter(it=> inTab(it) && it.x>=xAmz-5 && it.x<xQtd-5 && it.y>=y0-3 && it.y<y1-3)
-                                         .sort((a,b)=>a.y-b.y).map(it=>it.s) : [];
-      const digits=(amzParts.join('').match(/\d+/g)||[]).join('');
-      const ean = digits.length>=13 ? digits.slice(0,13) : null;
-      const qty=+anchors[i].s.trim();
-      prods.push({sku,ean,qty}); tot+=qty;
+    if(!SHOPEE_ASN){
+      const tc0=await page.getTextContent();
+      const it=tc0.items.find(x=>/^INBR/.test((x.str||'').trim()));
+      if(it) SHOPEE_ASN=it.str.trim();
     }
+    const {linhas,aviso}=await shpExtrairPagina(page);
+    if (aviso) avisos.push('página '+p+': '+aviso);
+    linhas.forEach(l=>{ prods.push(l); tot+=l.qty; });
   }
-  if(!prods.length){ throw new Error('não encontrei produtos — esse PDF é o "Shopee Picking List"?'); }
-  const plan={}; EAN2SKU={}; SKU2EAN={};
+  if(!prods.length){ throw new Error('não encontrei produtos'+(avisos.length?' ('+avisos[0]+')':' — esse PDF é o "Shopee Picking List"?')); }
+  const plan={}; EAN2SKU={}; SKU2EAN={};   // Shopee não traz EAN de fábrica no PDF — carregue a Consulta de Derivação
   prods.forEach(pr=>{
-    const k=norm(pr.sku), tam=pr.sku.split('-').slice(2).join('-');
-    plan[k]={sku:pr.sku,tamanho:tam,titulo:'',plan:pr.qty};
-    if(pr.ean){ EAN2SKU[pr.ean]=k; SKU2EAN[k]=pr.ean; }
+    const k=norm(pr.sku), tam=pr.variacao||pr.sku.split('-').slice(2).join('-');
+    plan[k]={sku:pr.sku,tamanho:tam,titulo:pr.nome,plan:pr.qty,shopee_sku_id:pr.shopee_sku_id||null};
   });
-  markDz('dzPdfShopee', prods.length+' produtos · '+tot+' un');
+  const avisoTxt = avisos.length? ' ⚠ '+avisos.length+' página(s) com problema, confira o total' : '';
+  markDz('dzPdfShopee', prods.length+' produtos · '+tot+' un'+avisoTxt);
+  if(SHOPEE_ASN&&(!$('draftNome').value||/^Envio \d\d\/\d\d$/.test($('draftNome').value))) $('draftNome').value='Shopee '+SHOPEE_ASN;
   setDraft(plan,'Lista da Shopee (PDF)');
 }
 
@@ -996,7 +1042,7 @@ $('soComNec').onchange=renderPlan;
 
 
 function goNovo(){
-  showView('new'); DRAFT=null; ZNEW={text:null,labels:null,nome:''};
+  showView('new'); DRAFT=null; ZNEW={text:null,labels:null,nome:''}; SHOPEE_ASN=null;
   NEC=null; EAN2SKU={}; SKU2EAN={};
   document.querySelectorAll('#importCard .dropzone').forEach(d=>d.classList.remove('loaded'));
   const lbl={dzNec:'necessidade_full.json',dzEst:'Consultar_Estoque…csv',dzLoc:'Consulta de Estoque com Localização…csv',dzPdf:'Inbound…preparation.pdf',dzPdfShopee:'Picking List',dzEan:'SKU × EAN (plano próprio)',dzPlano:'plano_envio_full…json',dzZpl:'Envio-…-Etiquetas….txt · opcional'};
@@ -1166,7 +1212,7 @@ function itensFromDraft(){
   const zi=ZNEW.labels?zplIndex(ZNEW.labels):{};
   return Object.entries(DRAFT.plan).filter(([k,p])=>p.plan>0).map(([k,p])=>{
     const z=zi[loose(k)];
-    return {sku:k,sku_original:p.sku,pai:paiDe(k),tamanho:p.tamanho||k.split('-').slice(2).join('-'),titulo:p.titulo||(z?z.titulo:''),ean:eansDe(k).join(',')||null,cod_ml:z?z.cod:null,qtd_plan:p.plan,_etq:z?z.n:null};
+    return {sku:k,sku_original:p.sku,pai:paiDe(k),tamanho:p.tamanho||k.split('-').slice(2).join('-'),titulo:p.titulo||(z?z.titulo:''),ean:eansDe(k).join(',')||null,cod_ml:z?z.cod:(p.shopee_sku_id||null),qtd_plan:p.plan,_etq:z?z.n:null};
   });
 }
 function groupBy(arr,f){ const m=new Map(); arr.forEach(x=>{ const k=f(x); if(!m.has(k)) m.set(k,[]); m.get(k).push(x); }); return m; }
@@ -1183,7 +1229,7 @@ function renderDraft(){
     <div class="kpi is-accent"><div class="kpi-label">Pares</div><div class="kpi-value">${nf.format(pares)}</div></div>
     <div class="kpi"><div class="kpi-label">SKUs sem EAN</div><div class="kpi-value">${nf.format(semEan)}</div></div>`;
   let bn='';
-  if(semEan) bn+=bannerHtml('warn',`<div><b>${semEan} SKU(s) sem EAN.</b> Sem o EAN não dá para bipar a caixa — só digitando o SKU. Carregue a <b>Consulta de Derivação</b> (ou use a lista do ML/Shopee, que já traz o EAN).</div>`);
+  if(semEan) bn+=bannerHtml('warn',`<div><b>${semEan} SKU(s) sem EAN.</b> Sem o EAN não dá para bipar a caixa — só digitando o SKU. Carregue a <b>Consulta de Derivação</b> da Magazord (a lista do ML já traz o EAN junto; a da Shopee não traz — precisa da Consulta de Derivação).</div>`);
   let etqMap=null;
   if(ZNEW.labels){
     const zi=zplIndex(ZNEW.labels), keys=new Set(its.map(i=>loose(i.sku)));
@@ -1207,7 +1253,7 @@ $('btnCriar').onclick=async()=>{
   if(!DRAFT) return;
   const its=itensFromDraft(); if(!its.length){ alert('O plano não tem itens.'); return; }
   const nome=$('draftNome').value.trim()||('Envio '+new Date().toLocaleDateString('pt-BR'));
-  const cod=(/Envio-(\d+)/i.exec(ZNEW.nome||'')||[])[1]||null;
+  const cod=(/Envio-(\d+)/i.exec(ZNEW.nome||'')||[])[1]||SHOPEE_ASN||null;
   $('btnCriar').disabled=true; $('btnCriar').textContent='Criando…';
   try{
     const r=await call('full_criar_envio',{p_nome:nome,p_codigo_ml:cod,p_itens:its.map(({_etq,...x})=>x),p_zpl:ZNEW.text||null});
@@ -1277,7 +1323,7 @@ $('tabC').onclick=()=>selectEnvTab('C'); $('tabE').onclick=()=>selectEnvTab('E')
 function renderEnvioAtual(){
   if(!E) return;
   $('envNome').textContent=E.nome;
-  $('envTags').innerHTML=(E.codigo_ml?`<span class="tag tag-neutral">ML #${esc(E.codigo_ml)}</span> `:'')+(E.encerrado_em?'<span class="tag tag-neutral">encerrado</span>':'');
+  $('envTags').innerHTML=(E.codigo_ml?`<span class="tag tag-neutral">${isShopee(E)?'Shopee':'ML'} #${esc(E.codigo_ml)}</span> `:'')+(E.encerrado_em?'<span class="tag tag-neutral">encerrado</span>':'');
   $('btnEncerrar').textContent=E.encerrado_em?'Reabrir envio':'Encerrar envio';
   $('footR').textContent='Envio “'+E.nome+'”'+(S.lastSync?' · atualizado às '+hora(S.lastSync):'');
   if(!$('panelC').classList.contains('hidden')) renderConf();
@@ -1495,8 +1541,14 @@ function etqDesej(k){
 }
 const etqConfPend=k=>Math.max(0,Math.min(bipEf(k),IT[k].plan)-IT[k].impresso);
 function etqQtd(k){ return Math.min(etqDesej(k),ETQ.avail[loose(k)]||0); }
+const isShopee=e=>!!(e&&e.codigo_ml&&/^INBR/i.test(e.codigo_ml));
 async function renderEtq(){
   if(!E) return;
+  if(isShopee(E)){
+    $('etqLoading').classList.add('hidden'); $('etqNoZpl').classList.add('hidden'); $('etqReady').classList.add('hidden');
+    $('etqShopee').classList.remove('hidden'); renderEtqShopee(); return;
+  }
+  $('etqShopee').classList.add('hidden');
   if(ETQ.for!==E.id&&!ETQ.loading&&!ETQ.err){ ensureLabels().then(()=>renderEtq()); }
   $('etqLoading').classList.toggle('hidden',!ETQ.loading);
   if(ETQ.err&&!ETQ.loading){ $('etqNoZpl').classList.add('hidden'); $('etqReady').classList.add('hidden'); $('etqBanners').innerHTML=bannerHtml('bad','<div class="grow"><b>Não consegui baixar as etiquetas do banco.</b> '+esc(ETQ.errMsg||'')+'</div><button class="btn btn-secondary" id="btnEtqRetry">Tentar de novo</button>'); $('btnEtqRetry').onclick=()=>{ ETQ.err=false; renderEtq(); }; return; }
@@ -1534,12 +1586,83 @@ async function renderEtq(){
   $('etqBanners').innerHTML=bn;
   renderPending(); updateGerar();
 }
+function etqShDesej(k){
+  const p=IT[k], modo=$('etqShModo').value;
+  if(modo==='tudo') return p.plan;
+  if(modo==='falta') return Math.max(0,p.plan-p.impresso);
+  return Math.max(0,Math.min(bipEf(k),p.plan)-p.impresso);
+}
+function renderEtqShopee(){
+  const pais=paisResumo();
+  const rows=pais.map(g=>{
+    const aImp=g.skus.reduce((a,k)=>a+etqShDesej(k),0);
+    return `<tr><td><span class="sku">${esc(g.pai)}</span></td><td><div class="trunc">${esc(g.titulo)}</div></td><td class="num">${g.plan}</td><td class="num">${g.bip}</td><td class="num">${g.imp}</td><td class="num">${aImp}</td></tr>`;
+  });
+  $('etqShBody').innerHTML=rows.join('');
+}
+$('etqShModo').addEventListener('change',renderEtqShopee);
+$('btnGerarZplShopee').onclick=()=>{
+  const itens=ORDER.filter(k=>etqShDesej(k)>0).map(k=>{ const p=IT[k]; return {sku:k,sku_original:p.sku_original||k,cod_ml:p.cod_ml,titulo:p.titulo,qtd:etqShDesej(k)}; });
+  if(!itens.length){ alert('Nada a imprimir nesse modo.'); return; }
+  const semCod=itens.filter(i=>!i.cod_ml);
+  const prn=prnAtualSh(), tspl=prn.lang==='tspl';
+  const nome='etiquetas_shopee_'+slug(E.nome)+'_'+hora(new Date()).replace(/:/g,'')+(tspl?'_tspl.tspl':'.zpl');
+  if(tspl) dlLatin1(tsplShopeeBuild(itens),nome); else dl(zplShopeeBuild(itens),nome,'text/plain');
+  const totalN=itens.reduce((a,i)=>a+i.qtd,0);
+  $('etqShPending').innerHTML=bannerHtml('info',`<div class="grow"><b>${nf.format(totalN)} etiquetas</b> de ${itens.length} SKU(s) geradas para <b>${esc((prn.ap||'Impressora')+' · '+prn.lang.toUpperCase())}</b> em <code>${esc(nome)}</code>.${semCod.length?` <b>${semCod.length}</b> SKU(s) sem código da Shopee — saiu sem QR, só com Seller SKU.`:''}${tspl?' Layout ainda não testado nessa impressora — imprima um lote pequeno primeiro e confira o alinhamento.':''} Depois de imprimir, marque como impresso.</div><button class="btn btn-secondary" id="btnMarcarImpShopee">Marcar como impresso</button><button class="btn btn-ghost" id="btnDescartarImpShopee">Descartar</button>`);
+  $('btnMarcarImpShopee').onclick=async()=>{
+    try{ await call('full_registrar_impressao',{p_envio:E.id,p_maquina:S.maquina,p_itens:itens.map(i=>({sku:i.sku,qtd:i.qtd}))}); $('etqShPending').innerHTML=''; await refreshEstado(); renderEtqShopee(); }catch(e){ alert('Não consegui marcar como impresso: '+errMsg(e)); }
+  };
+  $('btnDescartarImpShopee').onclick=()=>{ $('etqShPending').innerHTML=''; };
+};
 function selQtd(){ const q={}; let n=0; ETQ.sel.forEach(p=>{ ORDER.filter(k=>IT[k].pai===p).forEach(k=>{ const c=etqQtd(k); if(c>0){ q[k]=c; n+=c; } }); }); return {q,n}; }
 function updateGerar(){ const {n}=selQtd(); $('btnGerarZpl').textContent='Gerar etiquetas ('+nf.format(n)+')'; $('btnGerarZpl').disabled=!n; }
 $('etqModo').onchange=renderEtq;
 $('etqSelConf').onclick=()=>{ ETQ.sel=new Set(paisResumo().filter(g=>g.skus.some(k=>etqQtd(k)>0)).map(g=>g.pai)); renderEtq(); };
 $('etqSelTodos').onclick=()=>{ ETQ.sel=new Set(paisResumo().map(g=>g.pai)); renderEtq(); };
 $('etqSelNenhum').onclick=()=>{ ETQ.sel=new Set(); renderEtq(); };
+/* ---- Etiqueta Shopee (QR nativo ZPL, 60x40mm p/ Zebra) ---- */
+function zplEsc(t){ return String(t==null?'':t).replace(/[\^~]/g,'').replace(/\\/g,'\\\\'); }
+function zplWrapLinhas(t,max,linhas){
+  const out=[]; let cur=''; String(t||'').split(' ').forEach(w=>{
+    while(w.length>max){ if(cur){out.push(cur);cur='';} out.push(w.slice(0,max)); w=w.slice(max); }
+    if(!w) return; if(!cur) cur=w; else if((cur+' '+w).length<=max) cur+=' '+w; else { out.push(cur); cur=w; }
+  }); if(cur) out.push(cur); return out.slice(0,linhas);
+}
+function zplShopeeLabel(item){   // item: {sku_original, cod_ml (shopee_sku_id), titulo}
+  const qr = item.cod_ml||'';
+  const ti = zplWrapLinhas(item.titulo||'',28,3);
+  let o = qr ? ('^FO16,60^BQN,2,4^FDLA,'+zplEsc(qr)+'^FS\n') : '^FO16,110^A0N,20,20^FB170,2,0,C^FD(sem código Shopee)^FS\n';
+  o += '^FO210,44^A0N,26,26^FB260,1,0,L^FDSeller SKU:^FS\n';
+  o += '^FO210,76^A0N,26,26^FB260,1,0,L^FD'+zplEsc(item.sku_original)+'^FS\n';
+  o += '^FO210,116^A0N,22,22^FB260,1,0,L^FDSKU: '+zplEsc(qr||'—')+'^FS\n';
+  ti.forEach((l,i)=>{ o += '^FO16,'+(250+i*24)+'^A0N,20,20^FB460,1,0,L^FD'+zplEsc(l)+'^FS\n'; });
+  return o;
+}
+function zplShopeeBuild(itens){    // itens: [{sku_original,cod_ml,titulo,qtd}]
+  let out='';
+  itens.forEach(it=>{ for(let i=0;i<it.qtd;i++){ out+='^XA^CI28\n'+zplShopeeLabel(it)+'^XZ\n'; } });
+  return out;
+}
+/* ---- mesma etiqueta em TSPL (Tomate), bobina 60x40mm — layout ainda não testado na impressora ---- */
+function tsplShopeeLabel(item){
+  const qr=item.cod_ml||'', cfg=tsplCfg();
+  const ti=tsWrap(tsTexto(item.titulo||'',cfg),40,3);
+  let o='';
+  if(qr) o+='QRCODE 16,16,H,4,A,0,"'+tsQ(qr)+'"'+'\r\n';
+  else o+='TEXT 16,70,"1",0,1,1,"(sem codigo Shopee)"\r\n';
+  o+='TEXT 190,16,"1",0,1,1,"Seller SKU:"\r\n';
+  o+='TEXT 190,40,"1",0,1,1,"'+tsQ(tsTexto(item.sku_original,cfg))+'"\r\n';
+  o+='TEXT 190,72,"0",0,1,1,"SKU: '+tsQ(qr||'-')+'"\r\n';
+  ti.linhas.forEach((l,i)=>{ o+='TEXT 16,'+(190+i*18)+',"0",0,1,1,"'+tsQ(l)+'"\r\n'; });
+  return o;
+}
+function tsplShopeeBuild(itens){
+  const CR='\r\n'; let o='SIZE 60 mm,40 mm'+CR+'GAP 3 mm,0'+CR+'DIRECTION 1'+CR+'REFERENCE 0,0'+CR;
+  itens.forEach(it=>{ for(let i=0;i<it.qtd;i++){ o+='CLS'+CR+tsplShopeeLabel(it)+'PRINT 1,1'+CR; } });
+  return o;
+}
+
 $('btnGerarZpl').onclick=()=>{
   const {q,n}=selQtd(); if(!n) return;
   const porKey={}; Object.keys(q).forEach(k=>{ porKey[loose(k)]=(porKey[loose(k)]||0)+q[k]; });
@@ -1580,10 +1703,15 @@ function savePrn(){
 function saveTom(){ LS.set('fc_tomate',JSON.stringify({ref:$('tomRef').value,step:$('tomStep').value,acento:$('tomAcento').checked})); }
 function prnAtual(){ return loadPrn()[$('etqPrn').value==='2'?1:0]; }
 function refreshPrnSel(){
-  const p=loadPrn(), sel=$('etqPrn'), cur=sel.value||LS.get('fc_prn_sel')||'1';
-  sel.innerHTML=p.map((x,i)=>`<option value="${i+1}">${esc(x.ap||('Impressora '+(i+1)))} · ${x.lang.toUpperCase()}</option>`).join('');
-  sel.value=cur==='2'?'2':'1';
+  const p=loadPrn();
+  const opts=p.map((x,i)=>`<option value="${i+1}">${esc(x.ap||('Impressora '+(i+1)))} · ${x.lang.toUpperCase()}</option>`).join('');
+  [$('etqPrn'),$('etqShPrn')].forEach(sel=>{
+    if(!sel) return;
+    const cur=sel.value||LS.get('fc_prn_sel')||'1';   // preserva a escolha própria de CADA seletor
+    sel.innerHTML=opts; sel.value=cur==='2'?'2':'1';
+  });
 }
+function prnAtualSh(){ return loadPrn()[($('etqShPrn')&&$('etqShPrn').value)==='2'?1:0]; }
 (function initPrn(){
   const p=loadPrn(), t=tsplCfg();
   [1,2].forEach(n=>{ $('prn'+n+'Ap').value=p[n-1].ap; $('prn'+n+'Sh').value=p[n-1].sh; $('prn'+n+'Lang').value=p[n-1].lang; });
